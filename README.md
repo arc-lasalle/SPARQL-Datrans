@@ -3,40 +3,30 @@
 This repository includes a list of SPARQL queries that enable to transform the data of BIM models in IFC4 to the SimModel specification.
 Two alternatives are provided depending on the format of the source:
 
-Input (source):
+Input (source):  
+RDF model expressed according to the ifcOWL ontology.  
+XML document expressed according to the ifcXML XSD schema.  
 
-RDF model expressed according to the ifcOWL ontology.
+Transformation languages:  
+(1) **SPARQL Construct** queries (source: RDF models)  
+(2) **SPARQL-Generate** queries (source: XML documents)  
 
-XML document expressed according to the ifcXML XSD schema.
-
-
-Transformation languages:
-
-(1) **SPARQL Construct** queries (source: RDF models)
-
-(2) **SPARQL-Generate** queries (source: XML documents)
-
-
-Output:
-
-RDF model expressed according to the SimModel ontology.
+Output:  
+RDF model expressed according to the SimModel ontology.  
 
 
 ## Usage
 You can implement a routine to process SPARQL queries using some of the existing libraries (Jena, DotNetRDF, etc.) depending on the programming language you prefer (Java, C #, etc.).
 
-- Apache Jena Library: https://jena.apache.org/download
-
-- DotNetRDF library: https://www.dotnetrdf.org/
+- Apache Jena Library: https://jena.apache.org/download<br>
+- DotNetRDF library: https://www.dotnetrdf.org/<br>
 
 Alternatively, we provide a Java utility that enables to transform IFC RDF models expressed according to the ifcOWL ontology, and IFC XML models expressed according to the ifcXML XSD schema, into SimModel RDF models.
 
-To convert an input RDF model (IFC4/ifcOWL) to an output RDF model (SimModel):
-
+To convert an input RDF model (IFC4/ifcOWL) to an output RDF model (SimModel):  
 java -jar datrans.jar -c <input_file.rdf> <output_file.rdf>
 
-To convert an input RDF model (IFC4/ifcXML) to an output RDF model (SimModel): 
-
+To convert an input RDF model (IFC4/ifcXML) to an output RDF model (SimModel):  
 java -jar datrans.jar -g <input_file.xml/.ifcxml> <output_file.rdf>
 
 
