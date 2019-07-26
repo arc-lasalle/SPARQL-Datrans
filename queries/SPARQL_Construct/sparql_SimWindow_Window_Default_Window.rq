@@ -1,0 +1,62 @@
+# IMPORTANT: use "ifc" allways as a prefix name for all of IFC instances and do not add any prefix URI for them.
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX rdf:	<http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX simcore: <http://www.opteemal.eu/schema/2017/01/SimModelCore#>
+PREFIX simbldg: <http://www.opteemal.eu/schema/2017/01/BuildingModel#>
+
+# last motifcation 2017.07.03
+
+CONSTRUCT
+{
+	?IfcWindow 
+		rdf:type 							simbldg:SimWindow_Window_Default ;
+		simbldg:name 						?simModelName ;		
+		simbldg:materialList 				?IfcMaterialConstituentSet ; 
+		simcore:containingSpatialStructure 	?simBuildingStorey ;
+		simcore:ifcGlobalID 				?IfcGloballyUniqueIdValue ;
+		simcore:refId 						?simWindowRefId ;
+		simcore:isTemplateObject 			"false"^^xsd:boolean ;
+		simcore:objectType 					"Window"^^xsd:string ;
+		simcore:simModelSubtype 			"Default"^^xsd:string ;
+		simcore:simModelType 				"Window"^^xsd:string ;
+		simcore:simUniqueID 				"not defined" ;
+		simcore:sourceModelObjectType 		"IfcWindow"^^xsd:string ;
+		simcore:sourceModelSchema 			"IFC4"^^xsd:string ;
+		simcore:tag 						"not defined" ;
+		.		 
+}
+WHERE 
+{
+	# PART 1 General information --------------------------------------------
+	?IfcWindow 
+		rdf:type 				ifc:IfcWindow ;
+		ifc:globalId_IfcRoot 	[ express:hasString ?IfcGloballyUniqueIdValue ] ;
+		ifc:name_IfcRoot 		[ express:hasString ?simModelName ] 
+		.
+
+	OPTIONAL {
+		?simBuildingStorey 
+			rdf:type ifc:IfcBuildingStorey ;
+			.
+		?IfcRelContainedInSpatialStructure 
+			rdf:type 												ifc:IfcRelContainedInSpatialStructure ;
+			ifc:relatingStructure_IfcRelContainedInSpatialStructure ?simBuildingStorey ;
+			ifc:relatedElements_IfcRelContainedInSpatialStructure 	?IfcWindow ;
+			.
+	}
+
+	# Connection to material Layer set:
+	?IfcRelAssociatesMaterial 
+		rdf:type  										ifc:IfcRelAssociatesMaterial ;
+		ifc:relatedObjects_IfcRelAssociates 			?IfcWindow ;
+		ifc:relatingMaterial_IfcRelAssociatesMaterial 	?IfcMaterialConstituentSet ;
+		.
+	bind( (xsd:ID(CONCAT("ID", strafter( xsd:string(?IfcWindow), "IfcWindow_" )))) as ?simWindowRefId ) . 
+	
+	# ID of SimModel_ID1 (get the instance base URI + SimModel_ID1)
+	bind( URI(CONCAT(STRBEFORE( xsd:string(?IfcWindow), "IfcWindow_" ), "SimModel_ID1")) as ?SimModel_ID1 ) .
+}
+
+
+
+

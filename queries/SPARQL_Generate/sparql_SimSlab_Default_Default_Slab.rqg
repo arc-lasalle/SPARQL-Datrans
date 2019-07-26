@@ -1,0 +1,106 @@
+BASE <http://trans.example.com/>
+PREFIX iter: <http://w3id.org/sparql-generate/iter/>
+PREFIX fn: <http://w3id.org/sparql-generate/fn/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+PREFIX simcore: <http://www.opteemal.eu/schema/2017/01/SimModelCore#>
+PREFIX simres: <http://www.opteemal.eu/schema/2017/01/ResourcesGeneral#>
+PREFIX simbldg: <http://www.opteemal.eu/schema/2017/01/BuildingModel#>
+PREFIX inst:  <http://opteemal-project.eu/resource/simmodel#>
+
+# last modification 2019.07.08
+
+GENERATE 
+{
+	GENERATE 
+	{
+		GENERATE 
+		{
+			GENERATE 
+			{	
+				?IfcSlab_IRI 
+					rdf:type 							simbldg:SimSlab_Default_Default ;
+					simcore:name                   		?Name ;
+					simbldg:materialLayerSet     	   	?IfcMaterialLayerSet_IRI ;
+					simcore:containingSpatialStructure 	?IfcBuildingStorey_IRI ;
+					simcore:ifcGlobalID 				?globalId ;
+					simcore:isTemplateObject 			"false"^^xsd:boolean ;
+					simbldg:name 						?Name ;
+					simcore:objectType 					?ObjectType ;
+					simcore:refId 						?IfcSlabRefId ;
+					simcore:simModelSubtype 			"Default"^^xsd:string ;
+					simcore:simModelType 				"Default"^^xsd:string ;
+					simcore:simUniqueID            		"not defined" ;
+					simcore:sourceModelObjectType 		"IfcSlab"^^xsd:string ;
+					simcore:sourceModelSchema 			"IFC4"^^xsd:string ;
+					simcore:tag							?tag ;
+					.
+					
+				?IfcMaterialLayerSet_IRI
+					rdf:type 							simres:SimMaterialLayerSet_OpaqueLayerSet_Default ; 
+					simres:layerSetName				 	?LayerSetUsageName;
+					simcore:simUniqueID 				"not defined"^^xsd:string ;
+					simcore:isTemplateObject 			"false"^^xsd:boolean ;
+					simcore:simModelSubtype 			"Default"^^xsd:string ;		
+					simcore:simModelType 				"OpaqueLayerSet"^^xsd:string ;
+					simcore:sourceModelObjectType 		"IfcMaterialLayerSet"^^xsd:string ;
+					simcore:sourceModelSchema			"IFC4"^^xsd:string ;
+					simcore:refId 						?IfcMaterialLayerSetRefId ;
+					.				
+				
+				GENERATE 
+				{	
+					?IfcMaterialLayerSet_IRI
+						simres:materialLayers				?IfcMaterialLayer_List_1_IRI ;
+						.
+				}
+				ITERATOR iter:XPath(?source, "//ifc_uos/IfcMaterialLayerSet[@id='"+?IfcMaterialLayerSet_REF+"']/MaterialLayers/IfcMaterialLayer/@ref") AS ?IfcMaterialLayer_REF
+				WHERE 
+				{
+					BIND( IRI( CONCAT( ?base, "IfcMaterialLayer_List_", ?IfcMaterialLayer_REF)) AS ?IfcMaterialLayer_List_1_IRI )	
+					
+				}.
+			}
+			ITERATOR iter:XPath(?source, "//ifc_uos/IfcMaterialLayerSetUsage[@id='"+?IfcMaterialLayerSetUsage_REF+"']") AS ?IfcMaterialLayerSetUsage
+			WHERE 
+			{
+				BIND( fn:XPath(?IfcMaterialLayerSetUsage,"/IfcMaterialLayerSetUsage/LayerSetName/text()") AS ?LayerSetUsageName )		
+				BIND( fn:XPath(?IfcMaterialLayerSetUsage,"/IfcMaterialLayerSetUsage/ForLayerSet/IfcMaterialLayerSet/@ref") AS ?IfcMaterialLayerSet_REF )	
+				BIND( (xsd:ID(CONCAT("ID", ?IfcMaterialLayerSet_REF))) as ?IfcMaterialLayerSetRefId )				
+				
+				BIND( IRI( CONCAT( ?base, "IfcMaterialLayerSet_", ?IfcMaterialLayerSet_REF)) AS ?IfcMaterialLayerSet_IRI )	
+			}.		
+		}
+		ITERATOR iter:XPath(?source, "//ifc_uos/IfcRelAssociatesMaterial[RelatedObjects/IfcSlab[@ref='"+?IfcSlab_ID+"']]/RelatingMaterial/IfcMaterialLayerSetUsage", "IfcMaterialLayerSetUsage/@ref" ) AS ?IfcMaterialLayerSet ?IfcMaterialLayerSetUsage_REF
+		WHERE { }.
+	}
+	ITERATOR iter:XPath(?source, "//ifc_uos/IfcRelContainedInSpatialStructure[RelatedElements/IfcSlab[@ref='"+?IfcSlab_ID+"']]" ) AS ?IfcRelContainedInSpatialStructure
+	WHERE
+	{
+		BIND( fn:XPath(?IfcRelContainedInSpatialStructure,"/IfcRelContainedInSpatialStructure/RelatingStructure/IfcBuildingStorey/@ref" ) AS ?IfcBuildingStorey_REF )
+		BIND( IRI( CONCAT( ?base, "IfcBuildingStorey_",?IfcBuildingStorey_REF ) ) AS ?IfcBuildingStorey_IRI )
+	}.
+}
+
+SOURCE <http://ex.org/file1> AS ?source
+# This name variable is mapped to a file path in a new line that will be 
+# included by the program linked to the original file:
+
+ITERATOR iter:XPath(?source, "//ifc_uos/IfcSlab" ) AS ?IfcSlab
+WHERE 
+{
+	# 1. Extract base URI:
+	BIND (str(inst:) as ?base)
+
+	# 2. Extract element names:
+	BIND( fn:XPath(?IfcSlab,"/IfcSlab/@id" ) AS ?IfcSlab_ID )	
+	BIND( fn:XPath(?IfcSlab,"/IfcSlab/GlobalId/text()") AS ?globalId )
+	
+	BIND( fn:XPath(?IfcSlab,"/IfcSlab/ObjectType/text()") AS ?ObjectType )
+	
+	BIND( fn:XPath(?IfcSlab,"/IfcSlab/Name/text()") AS ?Name )	
+	BIND( fn:XPath(?IfcSlab,"/IfcSlab/Tag/text()") AS ?tag )	
+	
+	BIND( IRI( CONCAT( ?base, "IfcSlab_", ?IfcSlab_ID ) ) AS ?IfcSlab_IRI )
+	BIND( (xsd:ID(CONCAT("ID", ?IfcSlab_ID))) as ?IfcSlabRefId ) . 
+}

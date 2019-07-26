@@ -1,0 +1,168 @@
+BASE <http://trans.example.com/>
+PREFIX iter: <http://w3id.org/sparql-generate/iter/>
+PREFIX fn: <http://w3id.org/sparql-generate/fn/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+PREFIX simcore: <http://www.opteemal.eu/schema/2017/01/SimModelCore#>
+PREFIX simgeom: <http://www.opteemal.eu/schema/2017/01/ResourcesGeometry#>
+PREFIX list: <https://w3id.org/list#> 
+PREFIX inst:  <http://opteemal-project.eu/resource/simmodel#>
+
+# last modification: 2019.07.07
+
+GENERATE
+{
+	GENERATE
+	{
+		# Location		
+		GENERATE
+		{
+			?IfcLocalPlacement_IRI 
+				rdf:type 						simgeom:SimLocalPlacement_LocalPlacement_RelativePlacement ;
+				simgeom:relativePlacement 		?IfcAxis2Placement3D_IRI ;
+				simcore:simModelType 			"LocalPlacement"^^xsd:string ;
+				simcore:simModelSubtype 		"AbsolutePlacement"^^xsd:string ;
+				simcore:isTemplateObject 		"false"^^xsd:boolean ;
+				simcore:simUniqueID             "not defined" ;
+				simcore:sourceModelObjectType  	"IfcLocalPlacement" ;
+				simcore:sourceModelSchema 		"IFC4" ;
+				simcore:refId 					?IfcLocalPlacementRefId ;
+				.		
+			?IfcAxis2Placement3D_IRI 
+				rdf:type 						simgeom:SimPlacement_Axis2Placement3D_Default ;
+				#simgeom:axis                    ?IfcDirectionAxis_IRI ;
+				simgeom:refDirection           	?IfcDirection_IRI ;
+				simgeom:location               	?IfcCartesianPoint_IRI ;
+				simcore:isTemplateObject 		"false"^^xsd:boolean ;
+				simcore:simModelSubtype        	"Default"^^xsd:string ;
+				simcore:simModelType 		   	"Axis2Placement3D"^^xsd:string ;
+				simcore:simUniqueID            	"not defined" ;
+				simcore:sourceModelObjectType  	"IfcAxis2Placement3D" ;
+				simcore:sourceModelSchema      	"IFC4" ;
+				simcore:refId 					?IfcAxis2Placement3DRefId ;
+				.				
+			?IfcCartesianPoint_IRI 
+				rdf:type 							simgeom:SimGeomPoint_Point_CartesianPoint ;
+				simcore:simModelType 				"Point"^^xsd:string ;
+				simcore:simModelSubtype 			"CartesianPoint"^^xsd:string ;
+				simcore:isTemplateObject 			"false"^^xsd:boolean ;
+				simcore:sourceModelObjectType 		"IfcCartesianPoint" ;
+				simcore:sourceModelSchema 			"IFC4" ;
+				simcore:simUniqueID 				"not defined" ;
+				simgeom:coordinates_MeasureValue 	?IfcLengthMeasure_List_0_IRI ;		
+				simcore:refId 						?IfcCartesianPointRefId ;
+				.			
+				
+			# List LOCATION
+			GENERATE 
+			{
+				?IfcLengthMeasure_List_IRI	
+					rdf:type            	simcore:DoubleList ;
+					list:hasContents 		?IfcLengthMeasureValue ;
+					list:hasNext 			?IfcLengthMeasure_List_IRI_NEXT ;
+					.
+			}
+			ITERATOR iter:XPath(?source, "//ifc_uos/IfcCartesianPoint[@id='"+?IfcCartesianPoint_REF+"']/Coordinates/IfcLengthMeasure" ) AS ?IfcLengthMeasure ?pos_ILM ?hasNext_ILM
+			WHERE
+			{
+				BIND( IRI( CONCAT( ?base, "IfcLengthMeasure_List_",(?IfcCartesianPoint_REF + "_{str(?pos_ILM+1)}")) ) AS ?IfcLengthMeasure_List_IRI )
+				BIND( IRI( CONCAT( ?base, "IfcLengthMeasure_List_",(?IfcCartesianPoint_REF + "_{str(?pos_ILM+2)}")) ) AS ?IfcLengthMeasure_List_IRI_NEXT_TEMP )
+				BIND( IF( ?hasNext_ILM, ?IfcLengthMeasure_List_IRI_NEXT_TEMP , ?undef ) AS ?IfcLengthMeasure_List_IRI_NEXT ) 
+				BIND( xsd:double(fn:XPath(?IfcLengthMeasure,"//IfcLengthMeasure/text()")) AS ?IfcLengthMeasureValue )
+			}.
+				
+			GENERATE
+			{
+				?IfcDirection_IRI
+					rdf:type 						simgeom:SimGeomVector_Vector_Direction ;
+					simgeom:directionRatios 		?IfcReal_List_0_IRI ;
+					simcore:simModelType 			"Vector"^^xsd:string ;
+					simcore:simModelSubtype 		"Direction"^^xsd:string ;
+					simcore:sourceModelSchema 		"IFC4"^^xsd:string ;
+					simcore:sourceModelObjectType 	"SimGeomVector"^^xsd:string ;
+					simcore:isTemplateObject 		"false"^^xsd:boolean ;
+					simcore:refId 					?IfcDirectionRefId ;
+					simcore:simUniqueID 			"not defined" ;
+					.
+					
+				# List Direction				
+				GENERATE 
+				{
+					?IfcReal_List_IRI 
+						rdf:type 				simcore:DoubleList ;
+						list:hasContents 		?IfcRealValue ;
+						list:hasNext 			?fcReal_List_IRI_NEXT ;
+						.
+				}
+				ITERATOR iter:XPath(?source, "//ifc_uos/IfcDirection[@id='"+?IfcDirection_REF+"']/DirectionRatios/IfcReal" ) AS ?IfcReal ?pos_ILM_Real ?hasNext_ILM_Real
+				WHERE
+				{
+					BIND( IRI( CONCAT( ?base, "IfcReal_List_",(?IfcDirection_REF + "_{str(?pos_ILM_Real+1)}")) ) AS ?IfcReal_List_IRI )
+					BIND( IRI( CONCAT( ?base, "IfcReal_List_",(?IfcDirection_REF + "_{str(?pos_ILM_Real+2)}")) ) AS ?IfcReal_List_IRI_NEXT_TEMP )
+					BIND( IF( ?hasNext_ILM_Real, ?IfcReal_List_IRI_NEXT_TEMP , ?undef2 ) AS ?fcReal_List_IRI_NEXT ) 
+					BIND( xsd:double(fn:XPath(?IfcReal,"//IfcReal/text()")) AS ?IfcRealValue )
+				}.
+			}
+			ITERATOR iter:XPath(?source, "//ifc_uos/IfcAxis2Placement3D[@id='"+?IfcAxis2Placement3D_REF+"']/RefDirection/IfcDirection" ) AS ?IfcDirection 
+			WHERE
+			{
+				BIND( fn:XPath(?IfcDirection,"/IfcDirection/@ref") AS ?IfcDirection_REF )
+				BIND( IRI( CONCAT( ?base, "IfcDirection_", ?IfcDirection_REF ) ) AS ?IfcDirection_IRI )
+				BIND( (xsd:ID(CONCAT("ID", ?IfcDirection_REF))) as ?IfcDirectionRefId ) . 
+				
+				BIND( IRI( CONCAT( ?base, "IfcReal_List_",(?IfcDirection_REF + "_1")) ) AS ?IfcReal_List_0_IRI )
+			}.
+		}
+		ITERATOR iter:XPath(?source, "//ifc_uos/IfcAxis2Placement3D[@id='"+?IfcAxis2Placement3D_REF+"']/Location/IfcCartesianPoint" ) AS ?IfcCartesianPoint 
+		WHERE
+		{
+			BIND( fn:XPath(?IfcCartesianPoint,"/IfcCartesianPoint/@ref") AS ?IfcCartesianPoint_REF )
+			BIND( IRI( CONCAT( ?base, "IfcCartesianPoint_", ?IfcCartesianPoint_REF ) ) AS ?IfcCartesianPoint_IRI )
+			BIND( (xsd:ID(CONCAT("ID", ?IfcCartesianPoint_REF))) as ?IfcCartesianPointRefId ) . 
+			
+			BIND( IRI( CONCAT( ?base, "IfcLengthMeasure_List_",(?IfcCartesianPoint_REF + "_1")) ) AS ?IfcLengthMeasure_List_0_IRI )
+		}.
+	}
+	ITERATOR iter:XPath(?IfcLocalPlacement, "/IfcLocalPlacement/RelativePlacement/IfcAxis2Placement3D" ) AS ?IfcAxis2Placement3D
+	WHERE
+	{
+		BIND( fn:XPath(?IfcAxis2Placement3D,"/IfcAxis2Placement3D/@ref") AS ?IfcAxis2Placement3D_REF )
+		BIND( IRI( CONCAT( ?base, "IfcAxis2Placement3D_", ?IfcAxis2Placement3D_REF ) ) AS ?IfcAxis2Placement3D_IRI )
+		BIND( (xsd:ID(CONCAT("ID", ?IfcAxis2Placement3D_REF))) as ?IfcAxis2Placement3DRefId ) .
+	}.
+}
+
+SOURCE <http://ex.org/file1> AS ?source
+# This name variable is mapped to a file path in a new line that will be 
+# included by the program linked to the original file:
+
+ITERATOR iter:XPath(?source, "//ifc_uos/IfcWindow/ObjectPlacement/IfcLocalPlacement" ) AS ?IfcLocalPlacement
+WHERE 
+{
+	# 1. Extract base URI:
+	BIND (str(inst:) as ?base)
+	BIND( fn:XPath(?IfcLocalPlacement,"/IfcLocalPlacement/@id" ) AS ?IfcLocalPlacement_ID )	
+	BIND( IRI( CONCAT( ?base, "IfcLocalPlacement_", ?IfcLocalPlacement_ID ) ) AS ?IfcLocalPlacement_IRI )
+	BIND( (xsd:ID(CONCAT("ID", ?IfcLocalPlacement_ID))) as ?IfcLocalPlacementRefId ) . 
+		
+	FILTER EXISTS { 
+		BIND( fn:XPath(?IfcLocalPlacement,"/IfcLocalPlacement/PlacementRelTo/IfcLocalPlacement/@ref" ) AS ?PlacementRelTo_REF )	  
+		FILTER (strlen(?PlacementRelTo_REF)>1)
+	}	
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

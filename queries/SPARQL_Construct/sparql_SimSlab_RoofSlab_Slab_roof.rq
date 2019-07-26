@@ -1,0 +1,90 @@
+# IMPORTANT: use "ifc" allways as a prefix name for all of IFC instances and do not add any prefix URI for them.
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX rdf:	<http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX simcore: <http://www.opteemal.eu/schema/2017/01/SimModelCore#>
+PREFIX simres: <http://www.opteemal.eu/schema/2017/01/ResourcesGeneral#>
+PREFIX simbldg: <http://www.opteemal.eu/schema/2017/01/BuildingModel#>
+
+# last modification 2017.07.24
+
+CONSTRUCT
+{
+	?IfcSlab 
+		rdf:type 							simbldg:SimSlab_RoofSlab ;
+		simbldg:name 						?name_IfcRootValue ;
+		simbldg:materialLayerSet     	   	?IfcMaterialLayerSet ;
+		simcore:containingSpatialStructure 	?IfcBuildingStorey ;
+		simcore:ifcGlobalID 				?IfcGloballyUniqueIdValue ;
+		simcore:isTemplateObject 			"false"^^xsd:boolean ;		
+		simcore:objectType 					?ElementType2 ;
+		simcore:refId 						?IfcSlab_refId ;
+		simcore:simModelSubtype 			"Default"^^xsd:string ;
+		simcore:simModelType 				"Default"^^xsd:string ;
+		simcore:simUniqueID            		"not defined" ;
+		simcore:sourceModelObjectType 		"IfcSlab"^^xsd:string ;
+		simcore:sourceModelSchema 			"IFC4"^^xsd:string ;
+		simcore:tag							?tag_IfcElement ;
+		.
+	?IfcMaterialLayerSet 
+		rdf:type 							simres:SimMaterialLayerSet_OpaqueLayerSet_Default ; 
+		simres:layerSetName				 	?name;
+		simcore:simUniqueID 				"not defined" ;
+		simres:materialLayers				?MaterialLayerListNode ;
+		simcore:isTemplateObject 			"false"^^xsd:boolean ;
+		simcore:refId 						?RefMatLayerId ;
+		simcore:simModelSubtype 			"Default"^^xsd:string ;		
+		simcore:simModelType 				"OpaqueLayerSet"^^xsd:string ;
+		simcore:sourceModelObjectType 		"IfcMaterialLayerSet"^^xsd:string ;
+		simcore:sourceModelSchema			"IFC4"^^xsd:string ;
+		.
+}
+WHERE 
+{
+	# PART 1 General information --------------------------------------------
+	
+	?IfcSlab 
+		rdf:type 				ifc:IfcSlab ;
+		ifc:globalId_IfcRoot 	[ express:hasString ?IfcGloballyUniqueIdValue ] ;
+		ifc:name_IfcRoot 		[ express:hasString ?name_IfcRootValue ] ;
+		.
+	OPTIONAL { ?IfcSlab ifc:tag_IfcElement [ express:hasString ?tag_IfcElement ] }
+	OPTIONAL { ?IfcSlab ifc:predefinedType_IfcSlab ?ElementType }
+		
+	bind( (xsd:ID(CONCAT("ID", strafter( xsd:string(?IfcSlab), "IfcSlab_" )))) as ?IfcSlab_refId ) . 
+	
+	?IfcBuildingStorey 
+		rdf:type ifc:IfcBuildingStorey ;
+		.
+	?IfcRelContainedInSpatialStructure 
+		ifc:relatedElements_IfcRelContainedInSpatialStructure ?IfcRoof ;
+		ifc:relatingStructure_IfcRelContainedInSpatialStructure ?IfcBuildingStorey ;
+		.
+	?IfcRoof
+		rdf:type ifc:IfcRoof ;	
+		.
+	?IfcRelAggregates
+		ifc:relatedObjects_IfcRelAggregates ?IfcSlab ;
+		ifc:relatingObject_IfcRelAggregates ?IfcRoof ;
+		.		
+	?IfcRelAssociatesMaterial
+		rdf:type  ifc:IfcRelAssociatesMaterial ;
+		ifc:relatedObjects_IfcRelAssociates  ?IfcSlab ;
+		ifc:relatingMaterial_IfcRelAssociatesMaterial  ?IfcMaterialLayerSet ;
+		.
+	?IfcMaterialLayerSet
+		rdf:type          	ifc:IfcMaterialLayerSet ;
+		ifc:layerSetName_IfcMaterialLayerSet [express:hasString ?name ] ;
+		ifc:materialLayers_IfcMaterialLayerSet ?MaterialLayerListNode ;
+		.
+		
+	bind( (xsd:ID(CONCAT("ID", strafter( xsd:string(?IfcMaterialLayerSet), "IfcMaterialLayerSet_" )))) as ?RefMatLayerId ) . 
+	
+	bind( STRAFTER( xsd:string(?ElementType), "#" ) as ?ElementType2 )	
+		
+	# ID of SimModel_ID1 (get the instance base URI + SimModel_ID1)
+	bind( URI(CONCAT(STRBEFORE( xsd:string(?IfcSlab), "IfcSlab_" ), "SimModel_ID1")) as ?SimModel_ID1 ) .
+}
+
+
+
+

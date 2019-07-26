@@ -1,0 +1,107 @@
+BASE <http://trans.example.com/>
+PREFIX iter: <http://w3id.org/sparql-generate/iter/>
+PREFIX fn: <http://w3id.org/sparql-generate/fn/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+PREFIX simcore: <http://www.opteemal.eu/schema/2017/01/SimModelCore#>
+PREFIX simgeom: <http://www.opteemal.eu/schema/2017/01/ResourcesGeometry#>
+PREFIX list: <https://w3id.org/list#> 
+PREFIX inst:  <http://opteemal-project.eu/resource/simmodel#>
+
+# last modification: 2019.06.07
+
+GENERATE 
+{
+	?IfcPolyline_IRI 
+		rdf:type 						simgeom:SimGeomCurve_Polyline_Default ;
+		simcore:simModelType 			"Polyline"^^xsd:string ;
+		simcore:simModelSubtype 		"Default"^^xsd:string ;
+		simcore:isTemplateObject 		"false"^^xsd:boolean ;		
+		simgeom:points 					?IfcCartesianPoint_List_1_IRI ;		
+		simcore:refId 					?PolylineRefId ;
+		simcore:simUniqueID 			"not defined" ;
+		simcore:sourceModelObjectType  	"IfcPolyline" ;
+		simcore:sourceModelSchema 		"IFC4" ;
+	.
+
+	GENERATE 
+	{
+		?IfcCartesianPoint_List_IRI
+			rdf:type 					simgeom:Points_List ;
+			list:hasContents 			?IfcCartesianPoint_Node_IRI ;			
+			list:hasNext 				?IfcCartesianPoint_List_IRI_NEXT ;  	
+		.
+		
+		?IfcCartesianPoint_Node_IRI
+			rdf:type   	               			simgeom:SimGeomPoint_Point_CartesianPoint ;
+			simcore:isTemplateObject       		false ;
+			simcore:refId                  		?IfcCartesianPointRefId ;
+			simcore:simModelSubtype        		"CartesianPoint" ;
+			simcore:simModelType           		"Point" ;
+			simcore:simUniqueID            		"not defined" ;
+			simcore:sourceModelObjectType  		"IfcCartesianPoint" ;
+			simcore:sourceModelSchema      		"IFC4" ;
+			simgeom:coordinates_MeasureValue  	?IfcLengthMeasure_List_0_IRI ;
+		.
+		
+		GENERATE 
+		{
+			?IfcLengthMeasure_List_IRI	
+				rdf:type            	simcore:DoubleList ;
+				list:hasContents 		?IfcLengthMeasureValue ;
+				list:hasNext 			?IfcLengthMeasure_List_IRI_NEXT ;
+				.
+		}
+		ITERATOR iter:XPath(?source, "//ifc_uos/IfcCartesianPoint[@id='"+?IfcCartesianPoint_REF+"']/Coordinates/IfcLengthMeasure" ) AS ?IfcLengthMeasure ?pos_ILM ?hasNext_ILM
+		WHERE 
+		{
+			BIND( IRI( CONCAT( ?base, "IfcLengthMeasure_List_",(?IfcCartesianPoint_REF + "_{str(?pos_ILM+1)}")) ) AS ?IfcLengthMeasure_List_IRI )
+			BIND( IRI( CONCAT( ?base, "IfcLengthMeasure_List_",(?IfcCartesianPoint_REF + "_{str(?pos_ILM+2)}")) ) AS ?IfcLengthMeasure_List_IRI_NEXT_TEMP )
+			BIND( IF( ?hasNext_ILM, ?IfcLengthMeasure_List_IRI_NEXT_TEMP , ?undef ) AS ?IfcLengthMeasure_List_IRI_NEXT ) 
+			BIND( fn:XPath(?IfcLengthMeasure,"//IfcLengthMeasure/text()") AS ?IfcLengthMeasureValue )		
+		}.		
+	}
+	ITERATOR iter:XPath(?IfcPolyline, "/IfcPolyline/Points/IfcCartesianPoint", "IfcCartesianPoint/@ref") AS ?IfcCartesianPoint ?IfcCartesianPoint_REF ?pos_ICP ?hasNext_ICP
+	WHERE 
+	{
+		# Note: the numbering "_X" is only to easy identify the position of the node in the list. Is not necessary to create different node names.
+		
+		BIND( fn:XPath(?IfcPolyline,"/IfcPolyline/Points/IfcCartesianPoint[{str(?pos_ICP+2)}]/@ref") AS ?IfcCartesianPoint_REF_NEXT )		
+
+		BIND( IRI( CONCAT( ?base, "IfcCartesianPoint_List_",(?IfcCartesianPoint_REF + "_{str(?pos_ICP+1)}")) ) AS ?IfcCartesianPoint_List_IRI )
+		BIND( IRI( CONCAT( ?base, "IfcCartesianPoint_List_",(?IfcCartesianPoint_REF_NEXT + "_{str(?pos_ICP+2)}")) ) AS ?IfcCartesianPoint_List_IRI_NEXT_TEMP )
+		BIND( IF( ?hasNext_ICP, ?IfcCartesianPoint_List_IRI_NEXT_TEMP , ?undef ) AS ?IfcCartesianPoint_List_IRI_NEXT ) 
+		
+		BIND( IRI( CONCAT( ?base, "IfcCartesianPoint_",(?IfcCartesianPoint_REF + "_{str(?pos_ICP+1)}")) ) AS ?IfcCartesianPoint_Node_IRI )
+		
+		# IMPORTANT: we can not use the ID of the IfcCartesianPoint since we are creating a list with the same ID:
+		#            Neither can we concatenate the ID with the list number because the resulting ID could exist for another instance.
+		#            So, we have to add "_".
+		BIND( xsd:ID(CONCAT("ID", ?IfcCartesianPoint_REF, "_{str(?pos_ICP+1)}")) as ?IfcCartesianPointRefId )
+		
+		BIND( IRI( CONCAT( ?base, "IfcLengthMeasure_List_",(?IfcCartesianPoint_REF + "_1")) ) AS ?IfcLengthMeasure_List_IRI_0_TEMP )
+		BIND( IF( ?hasNext_ICP, ?IfcLengthMeasure_List_IRI_0_TEMP , ?undef ) AS ?IfcLengthMeasure_List_0_IRI ) 
+	}.
+}
+
+SOURCE <http://ex.org/file1> AS ?source
+# This name variable is mapped to a file path in a new line that will be 
+# included by the program linked to the original file:
+
+ITERATOR iter:XPath(?source, "//ifc_uos/IfcShapeRepresentation/Items/IfcBooleanClippingResult/SecondOperand/IfcPolygonalBoundedHalfSpace/PolygonalBoundary/IfcPolyline" ) AS ?IfcPolyline
+WHERE 
+{
+    # 1. Extract base URI:
+	BIND (str(inst:) as ?base)
+	
+	# 2. Extract element names:
+	BIND( fn:XPath(?IfcPolyline,"/IfcPolyline/@id") AS ?IfcPolyline_ID )
+	BIND( fn:XPath(?IfcPolyline,"/IfcPolyline/Points/IfcCartesianPoint[1]/@ref") AS ?IfcCartesianPoint_0_REF )
+	
+	BIND( IRI( CONCAT( ?base, CONCAT("IfcCartesianPoint_List_", ?IfcCartesianPoint_0_REF), "_1")) AS ?IfcCartesianPoint_List_1_IRI )
+	BIND( IRI( CONCAT( ?base, "IfcPolyline_", ?IfcPolyline_ID ) ) AS ?IfcPolyline_IRI )
+	
+	BIND( (xsd:ID(CONCAT("ID", ?IfcPolyline_ID))) as ?PolylineRefId )
+}
+
+

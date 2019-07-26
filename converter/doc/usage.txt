@@ -1,0 +1,5 @@
+To convert an input RDF model (IFC4/ifcOWL) to an output RDF model (SimModel): 
+java -jar datrans.jar -c <input_file.rdf> <output_file.rdf>
+
+To convert an input RDF model (IFC4/ifcXML) to an output RDF model (SimModel): 
+java -jar datrans.jar -g <input_file.xml/.ifcxml> <output_file.rdf>

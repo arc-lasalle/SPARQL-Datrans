@@ -1,0 +1,74 @@
+BASE <http://trans.example.com/>
+PREFIX iter: <http://w3id.org/sparql-generate/iter/>
+PREFIX fn: <http://w3id.org/sparql-generate/fn/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+PREFIX simcore: <http://www.opteemal.eu/schema/2017/01/SimModelCore#>
+PREFIX simbldg: <http://www.opteemal.eu/schema/2017/01/BuildingModel#>
+PREFIX list: <https://w3id.org/list#> 
+PREFIX inst:  <http://opteemal-project.eu/resource/simmodel#>
+
+# last modification: 2019.06.07
+
+GENERATE
+{
+	?IfcMaterialConstituentSet_IRI 
+		rdf:type 						simbldg:SimList_MaterialList ;
+		simcore:simModelType 			"MaterialList"^^xsd:string ;
+		simcore:sourceModelSchema 		"IFC4"^^xsd:string ;
+		simcore:sourceModelObjectType 	"IfcMaterialConstituentSet"^^xsd:string ;
+		simcore:isTemplateObject 		"false"^^xsd:boolean ;
+		simcore:simUniqueID 			"not defined"^^xsd:string ;
+		simbldg:materials 				?Materials_List_IRI ;
+		simcore:refId 					?IfcMaterialConstituentSetRefId ;		
+	.
+	GENERATE
+	{
+		?Materials_List_CURRENT_IRI
+			rdf:type 			simbldg:Materials_List;
+			list:hasNext 		?Materials_List_NEXT_IRI ;  
+		.	
+		GENERATE
+		{	
+			?Materials_List_CURRENT_IRI
+				list:hasContents 	?IfcMaterial_NODE_IRI ;
+				.
+		}
+		ITERATOR iter:XPath(?IfcMaterialConstituent, "/IfcMaterialConstituent/Material/IfcMaterial/@ref") AS ?IfcMaterial_REF
+		WHERE
+		{
+			BIND( IRI( CONCAT( ?base, "IfcMaterial_", ?IfcMaterial_REF) ) AS ?IfcMaterial_NODE_IRI )
+		}.
+	}
+	ITERATOR iter:XPath(?source, "//ifc_uos/IfcMaterialConstituentSet[@id='"+?IfcMaterialConstituentSet_ID+"']/MaterialConstituents/IfcMaterialConstituent", "/IfcMaterialConstituent/@ref") AS ?IfcMaterialConstituent ?IfcMaterialConstituent_REF ?pos ?hasNext
+	WHERE 
+	{
+		BIND( IRI( CONCAT( ?base, "Materials_List_", ?IfcMaterialConstituent_REF) ) AS ?Materials_List_CURRENT_IRI )
+		
+		# Generate the IRI of the next node:
+		BIND( fn:XPath(?source, "//ifc_uos/IfcMaterialConstituentSet[@id='"+?IfcMaterialConstituentSet_ID+"']/MaterialConstituents/IfcMaterialConstituent[{str(?pos+2)}]/@ref") AS ?IfcMaterialConstituentNext_REF )
+		BIND( IRI( CONCAT( ?base, "Materials_List_", ?IfcMaterialConstituentNext_REF)) AS ?Materials_List_NEXT_IRI )
+	}.
+}
+
+SOURCE <http://ex.org/file1> AS ?source
+# This name variable is mapped to a file path in a new line that will be 
+# included by the program linked to the original file:
+
+ITERATOR iter:XPath(?source, "//ifc_uos/IfcMaterialConstituentSet" ) AS ?IfcMaterialConstituentSet
+WHERE 
+{
+    # 1. Extract base URI:
+	BIND (str(inst:) as ?base)
+	BIND( fn:XPath(?IfcMaterialConstituentSet,"/IfcMaterialConstituentSet/@id") AS ?IfcMaterialConstituentSet_ID )
+	BIND( (xsd:ID(CONCAT("ID", ?IfcMaterialConstituentSet_ID))) as ?IfcMaterialConstituentSetRefId )
+	BIND( IRI( CONCAT( ?base, "IfcMaterialConstituentSet_", ?IfcMaterialConstituentSet_ID)) AS ?IfcMaterialConstituentSet_IRI )
+	
+	# Generate the IRI of the first node of the materials_list:	
+	BIND( fn:XPath(?IfcMaterialConstituentSet,"/IfcMaterialConstituentSet/MaterialConstituents/IfcMaterialConstituent[1]/@ref") AS ?IfcMaterialConstituent_0_REF )
+	BIND( IRI( CONCAT( ?base, "Materials_List_", ?IfcMaterialConstituent_0_REF)) AS ?Materials_List_IRI )
+}
+
+
+
+

@@ -1,0 +1,93 @@
+BASE <http://trans.example.com/>
+PREFIX iter: <http://w3id.org/sparql-generate/iter/>
+PREFIX fn: <http://w3id.org/sparql-generate/fn/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+PREFIX simcore: <http://www.opteemal.eu/schema/2017/01/SimModelCore#>
+PREFIX simres: <http://www.opteemal.eu/schema/2017/01/ResourcesGeneral#>
+PREFIX simbldg: <http://www.opteemal.eu/schema/2017/01/BuildingModel#>
+PREFIX inst:  <http://opteemal-project.eu/resource/simmodel#>
+
+# last modification: 2019.07.09
+
+GENERATE 
+{
+	GENERATE 
+	{
+		GENERATE 
+		{
+			GENERATE 
+			{
+				?IfcRoof_IRI 
+					rdf:type 							simbldg:SimRoof_Roof_Default ;
+					simbldg:materialLayerSet     	   	?IfcMaterialLayerSet_IRI ;
+					simcore:containingSpatialStructure 	?IfcBuildingStorey_IRI ;  
+					simcore:ifcGlobalID 				?GlobalId ;
+					simcore:isTemplateObject 			"false"^^xsd:boolean ;
+					simbldg:name 						?Name ;
+					simcore:objectType 					?ObjectType ;
+					simcore:refId 						?IfcRoofRefId ;
+					simcore:simModelSubtype 			"Default"^^xsd:string ;
+					simcore:simModelType 				"Default"^^xsd:string ;
+					simcore:simUniqueID            		"not defined" ;
+					simcore:sourceModelObjectType 		"IfcRoof"^^xsd:string ;
+					simcore:sourceModelSchema 			"IFC4"^^xsd:string ;
+					simcore:tag							?Tag ;
+					.
+				?IfcMaterialLayerSet_IRI 
+					rdf:type 							simres:SimMaterialLayerSet_OpaqueLayerSet_Default ; 
+					simres:layerSetName				 	?LayerSetName;
+					simcore:simUniqueID 				"not defined" ;
+					simres:materialLayers				?IfcMaterialLayer_List_1_IRI ;
+					simcore:isTemplateObject 			"false"^^xsd:boolean ;					
+					simcore:simModelSubtype 			"Default"^^xsd:string ;		
+					simcore:simModelType 				"OpaqueLayerSet"^^xsd:string ;
+					simcore:sourceModelObjectType 		"IfcMaterialLayerSet"^^xsd:string ;
+					simcore:sourceModelSchema			"IFC4"^^xsd:string ;
+					simcore:refId 						?IfcMaterialLayerSetRefId ;
+					.
+			}
+			ITERATOR iter:XPath(?source, "//ifc_uos/IfcMaterialLayerSet[@id='"+?IfcMaterialLayerSet_REF+"']]") AS ?IfcMaterialLayerSet2
+			WHERE 
+			{
+				BIND( fn:XPath(?IfcMaterialLayerSet2,"/IfcMaterialLayerSet/LayerSetName/text()") AS ?LayerSetName )		
+				BIND( fn:XPath(?IfcMaterialLayerSet2,"/IfcMaterialLayerSet/MaterialLayers/IfcMaterialLayer[1]/@ref") AS ?IfcMaterialLayer_REF )		
+				BIND( IRI( CONCAT( ?base, "IfcMaterialLayer_", ?IfcMaterialLayer_REF)) AS ?IfcMaterialLayer_List_1_IRI )			
+				BIND( (xsd:ID(CONCAT("ID", ?IfcMaterialLayerSet_REF))) as ?IfcMaterialLayerSetRefId )
+			}.			
+		}
+		ITERATOR iter:XPath(?source, "//ifc_uos/IfcRelAssociatesMaterial[RelatedObjects/IfcRoof[@ref='"+?IfcRoof_ID+"']]/RelatingMaterial/IfcMaterialLayerSet", "IfcMaterialLayerSet/@ref" ) AS ?IfcMaterialLayerSet ?IfcMaterialLayerSet_REF
+		WHERE 
+		{
+			BIND( IRI( CONCAT( ?base, "IfcMaterialLayerSet_", ?IfcMaterialLayerSet_REF)) AS ?IfcMaterialLayerSet_IRI )	
+		}.
+	}
+	ITERATOR iter:XPath(?source, "//ifc_uos/IfcRelContainedInSpatialStructure[RelatedElements/IfcRoof[@ref='"+?IfcRoof_ID+"']]" ) AS ?IfcRelContainedInSpatialStructure
+	WHERE
+	{
+		BIND( fn:XPath(?IfcRelContainedInSpatialStructure,"/IfcRelContainedInSpatialStructure/RelatingStructure/IfcBuildingStorey/@ref" ) AS ?IfcBuildingStorey_REF )
+		BIND( IRI( CONCAT( ?base, "IfcBuildingStorey_",?IfcBuildingStorey_REF ) ) AS ?IfcBuildingStorey_IRI )
+	}.
+}
+
+SOURCE <http://ex.org/file1> AS ?source
+# This name variable is mapped to a file path in a new line that will be 
+# included by the program linked to the original file:
+
+ITERATOR iter:XPath(?source, "//ifc_uos/IfcRoof" ) AS ?IfcRoof
+WHERE 
+{
+    # 1. Extract base URI:
+	BIND (str(inst:) as ?base)
+	
+	BIND( fn:XPath(?IfcRoof,"/IfcRoof/@id") AS ?IfcRoof_ID )
+	BIND( fn:XPath(?IfcRoof,"/IfcRoof/GlobalId/text()") AS ?GlobalId )
+	BIND( fn:XPath(?IfcRoof,"/IfcRoof/Name/text()") AS ?Name )
+	BIND( fn:XPath(?IfcRoof,"/IfcRoof/ObjectType/text()") AS ?ObjectType )
+	BIND( fn:XPath(?IfcRoof,"/IfcRoof/Tag/text()") AS ?Tag )
+	BIND( (xsd:ID(CONCAT("ID", ?IfcRoof_ID))) as ?IfcRoofRefId )
+	BIND( IRI( CONCAT( ?base, "IfcRoof_", ?IfcRoof_ID)) AS ?IfcRoof_IRI )	
+}
+
+
+

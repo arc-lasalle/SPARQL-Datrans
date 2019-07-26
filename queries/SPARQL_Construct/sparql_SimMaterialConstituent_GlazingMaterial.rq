@@ -1,0 +1,78 @@
+# IMPORTANT: use "ifc" allways as a prefix name for all of IFC instances and do not add any prefix URI for them.
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX list: <https://w3id.org/list#>
+PREFIX express: <https://w3id.org/express#>
+PREFIX simcore: <http://www.opteemal.eu/schema/2017/01/SimModelCore#>
+PREFIX simres: <http://www.opteemal.eu/schema/2017/01/ResourcesGeneral#>
+
+# last modification: 2017.07.24
+
+CONSTRUCT
+{
+	?IfcMaterial 
+		rdf:type 								simres:SimMaterial_GlazingMaterial_SimpleGlazingSystem ;
+		simres:category                			?category ;
+		simres:name                    			?MaterialName ;
+		simcore:sourceModelSchema 				"IFC4"^^xsd:string ;
+		simcore:sourceModelObjectType 			"IfcMaterial"^^xsd:string ;
+		simcore:simUniqueID 					"not defined"^^xsd:string ;
+		simcore:isTemplateObject 				"false"^^xsd:boolean ;
+		simcore:simModelType 					"GlazingMaterial"^^xsd:string ;
+		simcore:simModelSubtype 				"SimpleGlazingSystem"^^xsd:string ;
+		# Glazing material properties -----------------------------------
+		simres:simMaterial_VisTrans	 			?VisualLightTransmittanceValue ;
+		simres:simMaterial_SolarHeatGainCoef 	?SolarHeatGainCoefficientValue ;
+		simres:simMaterial_UFactor 				?HeatTransferCoefficientValue ;		
+		simcore:refId 							?simMemberRefId_simMaterial ;
+		.		
+}
+WHERE
+{
+	?IfcMaterial
+		rdf:type ifc:IfcMaterial ;
+		ifc:name_IfcMaterial [ express:hasString  ?MaterialName ] ;
+		ifc:category_IfcMaterial 	[ express:hasString ?category ] ;
+		.	
+	?IfcMaterialConstituent
+		rdf:type  							ifc:IfcMaterialConstituent ;
+		ifc:material_IfcMaterialConstituent ?IfcMaterial ;
+		.
+  	
+	# We relate the type of door if it has glass or not
+	FILTER regex(?MaterialName, "glass", "i") .
+
+	?IfcMaterialProperties 
+		ifc:material_IfcMaterialProperties ?IfcMaterial ;
+		ifc:properties_IfcExtendedProperties ?IfcPropertySingleValue1 ;
+		ifc:properties_IfcExtendedProperties ?IfcPropertySingleValue2 ;
+		ifc:properties_IfcExtendedProperties ?IfcPropertySingleValue3 ;
+		.
+	
+	OPTIONAL {
+		# 1. VisualLight Transmittance Value --------------------------------------------------
+		?IfcPropertySingleValue1 rdf:type ifc:IfcPropertySingleValue ;
+			ifc:name_IfcProperty [ express:hasString "Visual Light Transmittance" ];
+			ifc:nominalValue_IfcPropertySingleValue [ express:hasDouble ?VisualLightTransmittanceValue ] .
+	}	
+	OPTIONAL {
+		# 2. SpecificHeatCapacity ------------------------------------------------------------		
+		?IfcPropertySingleValue2 rdf:type ifc:IfcPropertySingleValue ;
+			ifc:name_IfcProperty [ express:hasString "Solar Heat Gain Coefficient" ];
+			ifc:nominalValue_IfcPropertySingleValue [ express:hasDouble ?SolarHeatGainCoefficientValue ] .
+	}	
+	OPTIONAL {
+		# 3. HeatTransferCoefficientValue ----------------------------------------------------
+		?IfcPropertySingleValue3 rdf:type ifc:IfcPropertySingleValue ;
+			ifc:name_IfcProperty [ express:hasString "Heat Transfer Coefficient (U)" ];
+			ifc:nominalValue_IfcPropertySingleValue [ express:hasDouble ?HeatTransferCoefficientValue ] .
+	}
+
+	bind( (xsd:ID(CONCAT("ID", strafter( xsd:string(?IfcMaterial), "IfcMaterial_" )))) as ?simMemberRefId_simMaterial ) .
+}
+
+
+
+
+
+

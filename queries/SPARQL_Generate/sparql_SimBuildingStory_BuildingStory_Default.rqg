@@ -1,0 +1,60 @@
+BASE <http://trans.example.com/>
+PREFIX iter: <http://w3id.org/sparql-generate/iter/>
+PREFIX fn: <http://w3id.org/sparql-generate/fn/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+PREFIX simcore: <http://www.opteemal.eu/schema/2017/01/SimModelCore#>
+PREFIX simbldg: <http://www.opteemal.eu/schema/2017/01/BuildingModel#>
+PREFIX inst:  <http://opteemal-project.eu/resource/simmodel#>
+
+# last modification: 2019.07.04
+
+GENERATE 
+{
+	GENERATE 
+	{
+		?IfcBuildingStorey_IRI
+			rdf:type 								simbldg:SimBuildingStory_BuildingStory_Default ;
+			simbldg:bldgStoryInSpatialContainer 	?IfcBuilding_IRI ;
+			simbldg:name 							?Name ;
+			simcore:compositionType        			?CompositionType ;		
+			simcore:ifcGlobalID 					?IfcGloballyUniqueIdValue ;
+			simcore:isTemplateObject 				"false"^^xsd:boolean ;
+			simcore:longName 						?LongName ;
+			simcore:placement              			?IfcLocalPlacement_IRI ; 
+			simcore:refId 							?BuildingStoreyRefId ;
+			simcore:simModelSubtype 				"Default"^^xsd:string ;
+			simcore:simModelType 					"BuildingStory"^^xsd:string ;
+			simcore:simUniqueID 					"not defined" ;
+			simcore:sourceModelObjectType 			"IfcBuildingStorey"^^xsd:string ;
+			simcore:sourceModelSchema 				"IFC4"^^xsd:string ;
+		.
+	}
+	ITERATOR iter:XPath(?source, "//ifc_uos/IfcBuildingStorey", "IfcBuildingStorey/@id") AS ?IfcBuildingStorey ?IfcBuildingStorey_ID
+	WHERE 
+	{
+		BIND( IRI( CONCAT( ?base, "IfcBuildingStorey_", ?IfcBuildingStorey_ID)) AS ?IfcBuildingStorey_IRI )
+		
+		BIND( fn:XPath(?IfcBuildingStorey,"//IfcBuildingStorey/Name/text()") AS ?Name )		
+		BIND( fn:XPath(?IfcBuildingStorey,"//IfcBuildingStorey/CompositionType/text()") AS ?CompositionType )		
+		BIND( fn:XPath(?IfcBuildingStorey,"//IfcBuildingStorey/GlobalId/text()") AS ?IfcGloballyUniqueIdValue )		
+		BIND( fn:XPath(?IfcBuildingStorey,"//IfcBuildingStorey/LongName/text()") AS ?LongName )		
+		
+		BIND( fn:XPath(?IfcBuildingStorey,"//IfcBuildingStorey/ObjectPlacement/IfcLocalPlacement/@ref") AS ?IfcLocalPlacement_ID )		
+		BIND( IRI( CONCAT( ?base, "IfcLocalPlacement_", ?IfcLocalPlacement_ID)) AS ?IfcLocalPlacement_IRI )
+		
+		BIND( (xsd:ID(CONCAT("ID", ?IfcBuildingStorey_ID))) as ?BuildingStoreyRefId )
+	}.		
+}
+SOURCE <http://ex.org/file1> AS ?source
+# This name variable is mapped to a file path in a new line that will be 
+# included by the program linked to the original file:
+
+ITERATOR iter:XPath(?source, "//ifc_uos/IfcBuilding", "IfcBuilding/@id" ) AS ?IfcBuilding ?IfcBuilding_ID
+WHERE 
+{
+	# 1. Extract base URI:
+	BIND (str(inst:) as ?base)
+	
+	BIND( IRI( CONCAT( ?base, "IfcBuilding_", ?IfcBuilding_ID)) AS ?IfcBuilding_IRI )	
+}

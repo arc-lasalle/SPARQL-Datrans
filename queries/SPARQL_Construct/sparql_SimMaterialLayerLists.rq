@@ -1,0 +1,28 @@
+# IMPORTANT: use "ifc" allways as a prefix name for all of IFC instances and do not add any prefix URI for them.
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX list: <https://w3id.org/list#>
+PREFIX simres: <http://www.opteemal.eu/schema/2017/01/ResourcesGeneral#>
+
+# last modification 2017.11.17
+
+CONSTRUCT
+{
+	?MaterialLayerNode_List 
+		rdf:type 			simres:MaterialLayers_List ;
+		list:hasContents 	?MaterialLayer ;
+		list:hasNext		?MaterialLayer_List_Next ;
+		.
+}
+WHERE
+{
+	# Iterate the list of material layers:
+	?MaterialLayerNode_List 
+		rdf:type  			ifc:IfcMaterialLayer_List ;
+		list:hasContents 	?MaterialLayer ;
+		.
+	OPTIONAL {
+		?MaterialLayerNode_List list:hasNext ?MaterialLayer_List_Next .
+	}
+}
+	

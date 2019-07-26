@@ -1,0 +1,64 @@
+BASE <http://trans.example.com/>
+PREFIX iter: <http://w3id.org/sparql-generate/iter/>
+PREFIX fn: <http://w3id.org/sparql-generate/fn/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+PREFIX simcore: <http://www.opteemal.eu/schema/2017/01/SimModelCore#>
+PREFIX simbldg: <http://www.opteemal.eu/schema/2017/01/BuildingModel#>
+PREFIX list: <https://w3id.org/list#> 
+PREFIX inst:  <http://opteemal-project.eu/resource/simmodel#>
+
+# last modification: 2019.07.02
+
+GENERATE 
+{
+	?IfcBuilding_IRI 
+		rdf:type 									simbldg:SimBuilding_Building_Default ;
+		simcore:compositionType      				?CompositionType ;
+		simcore:ifcGlobalID 						?IfcGlobalID ;
+		simcore:placement 							?IfcLocalPlacement_IRI ; 
+		simcore:isTemplateObject 					"false"^^xsd:boolean ;
+		simcore:simModelSubtype 					"Default"^^xsd:string ;
+		simcore:simModelType 						"Building"^^xsd:string ;
+		simcore:simUniqueID 						"not defined" ;
+		simcore:sourceModelObjectType 				"IfcBuilding"^^xsd:string ;
+		simcore:sourceModelSchema 					"IFC4"^^xsd:string ;
+		simcore:refId 								?BuildingRefId ;
+		.		
+		
+	GENERATE { 
+		?IfcBuilding_IRI 
+			simbldg:buildingInSpatialContainer 	?IfcSite_IRI ;
+			.
+	}
+	ITERATOR iter:XPath(?source, "//ifc_uos/IfcRelAggregates" ) AS ?IfcRelAggregates
+	WHERE 
+	{
+		BIND( fn:XPath(?IfcRelAggregates,"/IfcRelAggregates/RelatingObject/IfcBuilding/@ref" ) AS ?IfcRelAggregates_REF )
+		BIND( fn:XPath(?IfcRelAggregates,"/IfcRelAggregates/RelatedObjects/IfcSite/@ref" ) AS ?IfcSite_REF )
+		BIND( IRI( CONCAT( ?base, "IfcSite_",?IfcSite_REF ) ) AS ?IfcSite_IRI )
+		FILTER ( xsd:string(?IfcSite_REF) != xsd:string("") )  .		
+	}.
+}
+
+SOURCE <http://ex.org/file1> AS ?source
+# This name variable is mapped to a file path in a new line that will be 
+# included by the program linked to the original file:
+
+ITERATOR iter:XPath(?source, "//ifc_uos/IfcBuilding" ) AS ?IfcBuilding
+WHERE 
+{
+    # 1. Extract base URI:
+	BIND (str(inst:) as ?base)
+	
+	# 2. Extract element names:
+	BIND( fn:XPath(?IfcBuilding,"/IfcBuilding/@id" ) AS ?IfcBuilding_ID )
+	BIND( fn:XPath(?IfcBuilding,"/IfcBuilding/CompositionType/text()") AS ?CompositionType )
+	BIND( fn:XPath(?IfcBuilding,"/IfcBuilding/GlobalId/text()") AS ?IfcGlobalID )
+	BIND( fn:XPath(?IfcBuilding,"/IfcBuilding/ObjectPlacement/IfcLocalPlacement/@ref") AS ?IfcLocalPlacement_REF)
+	BIND( IRI( CONCAT( ?base, "IfcLocalPlacement_", ?IfcLocalPlacement_REF ) ) AS ?IfcLocalPlacement_IRI )
+	
+	# 3. Refine element names:
+	BIND( IRI( CONCAT( ?base, "IfcBuilding_", ?IfcBuilding_ID ) ) AS ?IfcBuilding_IRI )
+	BIND( (xsd:ID(CONCAT("ID", ?IfcBuilding_ID))) as ?BuildingRefId ) . 
+}

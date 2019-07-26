@@ -1,0 +1,81 @@
+# IMPORTANT: use "ifc" allways as a prefix name for all of IFC instances and do not add any prefix URI for them.
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX rdf:	<http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX simcore: <http://www.opteemal.eu/schema/2017/01/SimModelCore#>
+PREFIX simgeom: <http://www.opteemal.eu/schema/2017/01/ResourcesGeometry#>
+PREFIX list:  <https://w3id.org/list#>
+PREFIX express: <https://w3id.org/express#>
+
+# last modification 2018.07.17
+
+CONSTRUCT
+{
+	?IfcOpeningElement 
+		rdf:type 							simgeom:SimFeatureElementSubtraction_Void_Opening ;
+		simcore:ifcGlobalID 				?IfcGloballyUniqueIdValue ;
+		simcore:name 						?name_IfcRootValue ;
+		simcore:refId 						?simVoidRefId ;
+		simgeom:voidedBldgElement			?voidedBldgElement ;
+		simgeom:placement 					?IfcLocalPlacement ;
+		simgeom:openingArea					?area ;
+		simgeom:openingVolume				?volume;
+		simcore:objectType 					"Opening"^^xsd:string ;
+		simcore:isTemplateObject 			"false"^^xsd:boolean ;
+		simcore:simModelSubtype 			"Default"^^xsd:string ;
+		simcore:simModelType 				"FeatureElementSubtraction_Void_Opening"^^xsd:string ;
+		simcore:simUniqueID 				"not defined" ;
+		simcore:sourceModelObjectType 		"IfcOpeningElement"^^xsd:string ;
+		simcore:sourceModelSchema 			"IFC4" ;
+		simcore:tag 						"not defined" ;
+		.		
+}
+WHERE 
+{
+	# PART 1 General information --------------------------------------------
+	?IfcOpeningElement 
+		rdf:type 						ifc:IfcOpeningElement ;
+		ifc:globalId_IfcRoot 			[express:hasString ?IfcGloballyUniqueIdValue ] ;
+		ifc:objectPlacement_IfcProduct 	?IfcLocalPlacement ;
+		.
+		
+	BIND( (xsd:ID(CONCAT("ID", strafter( xsd:string(?IfcOpeningElement), "IfcOpeningElement_" )))) as ?simVoidRefId ) .
+	
+	?IfcRelVoidsElement 
+		ifc:relatedOpeningElement_IfcRelVoidsElement 	?IfcOpeningElement ;
+		ifc:relatingBuildingElement_IfcRelVoidsElement 	?voidedBldgElement ;
+		.		
+	?IfcRelVoidsElement
+		ifc:relatedOpeningElement_IfcRelVoidsElement	 	?IfcOpeningElement ;
+		ifc:relatingBuildingElement_IfcRelVoidsElement		?IfcSlab ;
+	.	
+	?IfcSlab
+		rdf:type 											ifc:IfcSlab ;
+		.	 
+	
+	OPTIONAL {
+		# This is needed to subtract the area of the walls of holes (inside buildings or lightwells)
+		?IfcOpeningElement
+			ifc:representation_IfcProduct					?IfcProductDefinitionShape ;
+			.
+		?IfcProductDefinitionShape
+			ifc:representations_IfcProductRepresentation	?IfcRepresentation_List ;
+			.
+		?IfcRepresentation_List 
+			list:hasContents								?IfcShapeRepresentation ;
+			.
+		?IfcShapeRepresentation
+			ifc:items_IfcRepresentation						?IfcExtrudedAreaSolid ;
+			.
+		?IfcExtrudedAreaSolid
+			ifc:sweptArea_IfcSweptAreaSolid					?IfcRectangleProfileDef ;
+			.
+		?IfcRectangleProfileDef	
+			ifc:xDim_IfcRectangleProfileDef					[ express:hasDouble ?area1 ] ;
+			ifc:yDim_IfcRectangleProfileDef					[ express:hasDouble ?area2 ] ;
+			.	
+		BIND((?area1 * ?area2) as ?area)
+	}
+	
+	# ID of SimModel_ID1 (get the instance base URI + SimModel_ID1)
+	BIND( URI(CONCAT(STRBEFORE( xsd:string(?IfcOpeningElement), "IfcOpeningElement_" ), "SimModel_ID1")) as ?SimModel_ID1 ) .
+}

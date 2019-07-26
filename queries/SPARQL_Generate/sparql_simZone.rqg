@@ -1,0 +1,48 @@
+BASE <http://trans.example.com/>
+PREFIX iter: <http://w3id.org/sparql-generate/iter/>
+PREFIX fn: <http://w3id.org/sparql-generate/fn/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+PREFIX simcore: <http://www.opteemal.eu/schema/2017/01/SimModelCore#>
+PREFIX simres: <http://www.opteemal.eu/schema/2017/01/ResourcesGeneral#>
+PREFIX simbldg: <http://www.opteemal.eu/schema/2017/01/BuildingModel#>
+PREFIX inst:  <http://opteemal-project.eu/resource/simmodel#>
+
+# last modification 2019.07.08
+
+GENERATE 
+{	
+	?IfcZone_IRI 
+		rdf:type 						simbldg:SimZone ;
+		simbldg:name                   	?Name ;
+        simcore:ifcGlobalID            	?GlobalId ;
+        simcore:refId                  	?IfcZoneRefId ;		
+		simcore:isTemplateObject       	false ;
+        simcore:simUniqueID            	"none" ;
+        simcore:sourceModelObjectType  	"IfcZone" ;
+        simcore:sourceModelSchema      	"IFC4" ;
+		.		
+}
+
+SOURCE <http://ex.org/file1> AS ?source
+# This name variable is mapped to a file path in a new line that will be 
+# included by the program linked to the original file:
+
+ITERATOR iter:XPath(?source, "//ifc_uos/IfcZone" ) AS ?IfcZone
+WHERE 
+{
+	# 1. Extract base URI:
+	BIND (str(inst:) as ?base)
+
+	# 2. Extract element names:
+	BIND( fn:XPath(?IfcZone,"/IfcZone/@id" ) AS ?IfcZone_ID )	
+	BIND( fn:XPath(?IfcZone,"/IfcZone/Name/text()") AS ?Name )	
+	BIND( fn:XPath(?IfcZone,"/IfcZone/GlobalId/text()") AS ?GlobalId )
+	
+	BIND( IRI( CONCAT( ?base, "IfcZone_", ?IfcZone_ID ) ) AS ?IfcZone_IRI )
+	BIND( (xsd:ID(CONCAT("ID", ?IfcZone_ID))) as ?IfcZoneRefId ) . 
+}
+
+
+
+

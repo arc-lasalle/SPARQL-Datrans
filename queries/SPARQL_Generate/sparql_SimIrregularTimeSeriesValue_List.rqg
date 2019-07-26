@@ -1,0 +1,76 @@
+BASE <http://trans.example.com/>
+PREFIX iter: <http://w3id.org/sparql-generate/iter/>
+PREFIX fn: <http://w3id.org/sparql-generate/fn/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+PREFIX simcore: <http://www.opteemal.eu/schema/2017/01/SimModelCore#>
+PREFIX simres: <http://www.opteemal.eu/schema/2017/01/ResourcesGeneral#>
+PREFIX list: <https://w3id.org/list#> 
+PREFIX inst:  <http://opteemal-project.eu/resource/simmodel#>
+
+# last modification: 2019.06.07
+
+GENERATE
+{
+	GENERATE
+	{
+		?IfcIrregularTimeSeriesValue_List_IRI
+			rdf:type                simres:Values_List ;
+			list:hasContents  		?IfcIrregularTimeSeriesValue_IRI ;
+			.
+		?IfcIrregularTimeSeriesValue_IRI
+			rdf:type 						simres:SimIrregularTimeSeriesValue ;
+			simcore:sourceModelObjectType 	"IfcIrregularTimeSeriesValue"^^xsd:string ;	
+			simcore:sourceModelSchema 		"IFC4"^^xsd:string ;
+			simcore:isTemplateObject 		"false"^^xsd:boolean ;
+			simcore:simUniqueID 			"not defined" ;
+			simres:timeStamp 				?TimeStamp ;
+			simres:timeStampValue 			?TimeStampValue ;
+			simcore:refId 					?IfcIrregularTimeSeriesValueRefId ;
+			.
+		GENERATE
+		{	
+			?IfcIrregularTimeSeriesValue_List_IRI
+				list:hasNext     			?IfcIrregularTimeSeriesValue_List_NEXT_IRI ;
+			.
+		}
+		ITERATOR iter:XPath(?source, "//ifc_uos/IfcIrregularTimeSeries[@id='"+?IfcIrregularTimeSeries_ID+"']/Values/IfcIrregularTimeSeriesValue["+?IfcIrregularTimeSeriesValue_Pos_Next+"]" ) AS ?IfcIrregularTimeSeriesValueNext
+		WHERE 
+		{
+			# The last node is not created because "IfcIrregularTimeSeriesValue_Pos_Next" points the next position of the current node.
+			BIND( fn:XPath(?IfcIrregularTimeSeriesValueNext,"/IfcIrregularTimeSeriesValue/@id") AS ?IfcIrregularTimeSeriesValue_NEXT_ID )
+			BIND( fn:XPath(?IfcIrregularTimeSeriesValueNext,"/IfcIrregularTimeSeriesValue/@exp:pos") AS ?IfcIrregularTimeSeriesValue_Pos_Current_NEXT )		
+			BIND( IRI( CONCAT( ?base, "IfcIrregularTimeSeriesValue_List_", (?IfcIrregularTimeSeriesValue_NEXT_ID + "_" + ?IfcIrregularTimeSeriesValue_Pos_Current_NEXT)) ) AS ?IfcIrregularTimeSeriesValue_List_NEXT_IRI )
+		}.
+	}
+	ITERATOR iter:XPath(?source, "//ifc_uos/IfcIrregularTimeSeries[@id='"+?IfcIrregularTimeSeries_ID+"']/Values/IfcIrregularTimeSeriesValue" ) AS ?IfcIrregularTimeSeriesValue
+	WHERE 
+	{
+		BIND( fn:XPath(?IfcIrregularTimeSeriesValue,"/IfcIrregularTimeSeriesValue/@id") AS ?IfcIrregularTimeSeriesValue_ID )
+		BIND( IRI( CONCAT( ?base, "IfcIrregularTimeSeriesValue_", ?IfcIrregularTimeSeriesValue_ID)) AS ?IfcIrregularTimeSeriesValue_IRI )
+		
+		BIND( fn:XPath(?IfcIrregularTimeSeriesValue,"/IfcIrregularTimeSeriesValue/TimeStamp/text()") AS ?TimeStamp )
+		BIND( xsd:double(fn:XPath(?IfcIrregularTimeSeriesValue,"/IfcIrregularTimeSeriesValue/ListValues/IfcValue[1]/text()")) AS ?TimeStampValue )
+		BIND( (xsd:ID(CONCAT("ID", ?IfcIrregularTimeSeriesValue_ID))) as ?IfcIrregularTimeSeriesValueRefId )
+		
+		BIND( fn:XPath(?IfcIrregularTimeSeriesValue,"/IfcIrregularTimeSeriesValue/@exp:pos") AS ?IfcIrregularTimeSeriesValue_Pos_Current )	
+		BIND( (xsd:string((xsd:integer(?IfcIrregularTimeSeriesValue_Pos_Current) + 2))) AS ?IfcIrregularTimeSeriesValue_Pos_Next)	
+
+		BIND( IRI( CONCAT( ?base, "IfcIrregularTimeSeriesValue_List_",(?IfcIrregularTimeSeriesValue_ID + "_" + ?IfcIrregularTimeSeriesValue_Pos_Current)) ) AS ?IfcIrregularTimeSeriesValue_List_IRI )		
+	}.
+}
+
+SOURCE <http://ex.org/file1> AS ?source
+# This name variable is mapped to a file path in a new line that will be 
+# included by the program linked to the original file:
+
+ITERATOR iter:XPath(?source, "//ifc_uos/IfcIrregularTimeSeries" ) AS ?IfcIrregularTimeSeries
+WHERE 
+{
+    # 1. Extract base URI:
+	BIND (str(inst:) as ?base)
+	
+	# 2. Extract element names:
+	BIND( fn:XPath(?IfcIrregularTimeSeries,"/IfcIrregularTimeSeries/@id") AS ?IfcIrregularTimeSeries_ID )
+}
+

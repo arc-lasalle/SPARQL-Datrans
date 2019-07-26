@@ -1,0 +1,97 @@
+# IMPORTANT: use "ifc" allways as a prefix name for all of IFC instances and do not add any prefix URI for them.
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX rdf:	<http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX simcore: <http://www.opteemal.eu/schema/2017/01/SimModelCore#>
+PREFIX simres: <http://www.opteemal.eu/schema/2017/01/ResourcesGeneral#>
+PREFIX simbldg: <http://www.opteemal.eu/schema/2017/01/BuildingModel#>
+
+# last motifcation 2017.07.24
+
+CONSTRUCT
+{
+	?IfcWall 
+		rdf:type 							simbldg:SimWall_Wall_Default ;
+		simcore:name 						?name_IfcRootValue ; 			
+		simcore:ifcGlobalID 				?IfcGloballyUniqueIdValue ;
+		simcore:containingSpatialStructure 	?simBuildingStorey ;
+		simbldg:materialLayerSet 			?IfcMaterialLayerSet ;
+		simbldg:wallGrossSideArea			?area ;
+		simcore:objectType 					"Wall"^^xsd:string ;  			
+		simcore:refId 						?simWallRefId ;
+		simcore:isTemplateObject 			"false"^^xsd:boolean ;
+		simcore:simModelSubtype 			"Default"^^xsd:string ;		
+		simcore:simModelType 				"Wall"^^xsd:string ;
+		simcore:simUniqueID 				"not defined" ;
+		simcore:sourceModelObjectType 		"IfcWall"^^xsd:string ;
+		simcore:sourceModelSchema 			"IFC4" ;
+		simcore:tag 						"not defined" ;
+		.
+	?IfcMaterialLayerSet 
+		rdf:type 							simres:SimMaterialLayerSet_OpaqueLayerSet_Default ; 
+		simres:layerSetName				 	?name;
+		simres:materialLayers				?MaterialLayerListNode ;
+		simcore:isTemplateObject 			"false"^^xsd:boolean ;
+		simcore:refId 						?RefMatLayerRefId ;
+		simcore:simModelSubtype 			"Default"^^xsd:string ;
+		simcore:simModelType 				"OpaqueLayerSet"^^xsd:string ;
+		simcore:simUniqueID 				"not defined" ;
+		simcore:sourceModelObjectType 		"IfcMaterialLayerSet"^^xsd:string ;
+		simcore:sourceModelSchema			"IFC4"^^xsd:string ;
+		.
+}
+WHERE 
+{
+	# PART 1 General information --------------------------------------------
+
+	?simBuildingStorey 
+		rdf:type 				ifc:IfcBuildingStorey ;
+		.
+	?IfcRelContainedInSpatialStructure 
+		rdf:type 												ifc:IfcRelContainedInSpatialStructure ;
+		ifc:relatingStructure_IfcRelContainedInSpatialStructure ?simBuildingStorey ;
+		ifc:relatedElements_IfcRelContainedInSpatialStructure 	?IfcWall ;
+		.
+	?IfcWall 
+		rdf:type 				ifc:IfcWall ;
+		ifc:globalId_IfcRoot 	[ express:hasString ?IfcGloballyUniqueIdValue ] ;
+		ifc:name_IfcRoot 		[ express:hasString ?name_IfcRootValue ] ;
+		.
+
+	bind( (xsd:ID(CONCAT("ID", strafter( xsd:string(?IfcWall), "IfcWall_" )))) as ?simWallRefId ) .
+	
+	# Connection to material Layer set:	
+	?IfcRelAssociatesMaterial
+		rdf:type  										ifc:IfcRelAssociatesMaterial ;
+		ifc:relatedObjects_IfcRelAssociates  			?IfcWall ;
+        ifc:relatingMaterial_IfcRelAssociatesMaterial  	[ ifc:forLayerSet_IfcMaterialLayerSetUsage ?IfcMaterialLayerSet ] ;
+		.
+	
+	?IfcMaterialLayerSet
+		rdf:type  										ifc:IfcMaterialLayerSet ;
+		ifc:materialLayers_IfcMaterialLayerSet 			?MaterialLayerListNode ;
+		ifc:layerSetName_IfcMaterialLayerSet 			[ express:hasString ?name ] ;
+		.	
+
+	?IfcRel 
+		ifc:relatedObjects_IfcRelDefinesByProperties 				?IfcWall ;
+		ifc:relatingPropertyDefinition_IfcRelDefinesByProperties 	?IfcPropertySet ;
+		.
+	
+	?IfcPropertySet 
+		ifc:hasProperties_IfcPropertySet 			?IfcPropertySingleValue ;
+		.
+	?IfcPropertySingleValue 
+		rdf:type 									ifc:IfcPropertySingleValue ;
+		ifc:name_IfcProperty 						[ express:hasString "Area" ] ; # the standardized name provided in the IFC 4 documentation is --> 
+		ifc:nominalValue_IfcPropertySingleValue 	[ express:hasDouble ?area ] ;
+		.
+		
+	bind( (xsd:ID(CONCAT("ID", strafter( xsd:string(?IfcMaterialLayerSet), "IfcMaterialLayerSet_" )))) as ?RefMatLayerRefId ) .
+	
+	# ID of SimModel_ID1 (get the instance base URI + SimModel_ID1)
+	bind( URI(CONCAT(STRBEFORE( xsd:string(?IfcWall), "IfcWall_" ), "SimModel_ID1")) as ?SimModel_ID1 ) .
+}
+
+
+
+

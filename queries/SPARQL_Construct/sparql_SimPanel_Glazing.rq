@@ -1,0 +1,137 @@
+# IMPORTANT: use "ifc" always as a prefix name for all of IFC instances and do not add any prefix URI for them.
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX list: <https://w3id.org/list#>
+PREFIX express: <https://w3id.org/express#>
+PREFIX simcore: <http://www.opteemal.eu/schema/2017/01/SimModelCore#>
+PREFIX simbldg: <http://www.opteemal.eu/schema/2017/01/BuildingModel#>
+PREFIX simmep: <http://www.opteemal.eu/schema/2017/01/MepModel#>
+
+# last modification: 2017.11.21
+
+CONSTRUCT
+{
+	?IfcPlate 
+		rdf:type 						simbldg:SimPanel_Glazing ;
+		simbldg:materialList			?IfcRelAssociatesMaterial ;
+		simcore:ifcGlobalID 			?IfcGloballyUniqueIdValue ;
+		simcore:isTemplateObject 		"false"^^xsd:boolean ;
+		simcore:name 					?name_IfcRoot;		
+		simcore:simModelType 			"Glazing"^^xsd:string ;
+		simcore:sourceModelSchema		"IFC4"^^xsd:string ;
+		simcore:sourceModelObjectType 	"IfcPlate"^^xsd:string ;
+		simcore:objectType 				"Glazed"^^xsd:string ;
+		simcore:simUniqueID 			"not defined"^^xsd:string ;
+		simcore:refId 					?RefIdPanel ;
+		simcore:tag 					?tag ;
+		.		
+	?IfcRelAssociatesMaterial 
+        rdf:type                       	simbldg:SimList_MaterialList ;
+        simbldg:materials              	?IfcMaterialConstituentSet ;
+        simcore:isTemplateObject       	false ;
+        simcore:refId                  	?RefIdMaterialLayerSet ;
+        simcore:simModelType           	"MaterialList" ;
+        simcore:simUniqueID            	"not defined" ;
+        simcore:sourceModelSchema      	"IFC4" ;
+		 .	
+	?IfcMaterialConstituentSet
+		rdf:type                 		simbldg:Materials_List ;
+		list:hasContents  				?IfcMaterial ;
+		.		
+}
+WHERE
+{
+	?IfcPlate 
+		rdf:type 				ifc:IfcPlate ;
+		ifc:globalId_IfcRoot 	[ express:hasString ?IfcGloballyUniqueIdValue ] ;
+		ifc:name_IfcRoot 		[ express:hasString ?name_IfcRoot ] ;
+		ifc:tag_IfcElement 		[ express:hasString ?tag ] ;
+		.		
+	?IfcRelDefinesByProperties
+        ifc:relatedObjects_IfcRelDefinesByProperties  				?IfcPlate ;
+        ifc:relatingPropertyDefinition_IfcRelDefinesByProperties  	?IfcPropertySet ;
+		.
+	?IfcRelDefinesByProperties2
+		ifc:relatedObjects_IfcRelDefinesByProperties 				?IfcPlate ;
+		ifc:relatingPropertyDefinition_IfcRelDefinesByProperties 	?IfcPropertySet2 ;
+		.
+
+	?IfcPropertySet2 ifc:hasProperties_IfcPropertySet ?IfcPropertySingleValue2 .	
+		
+	#### to get the object type
+	{
+		?IfcPropertySet 
+			ifc:hasProperties_IfcPropertySet ?IfcPropertySingleValue ;
+			.
+		?IfcPropertySingleValue
+			ifc:name_IfcProperty 					[ express:hasString "Reference" ] ;
+			ifc:nominalValue_IfcPropertySingleValue [ express:hasString "Glazed" ] ;
+			.		
+	} UNION {
+		?IfcRelAssociatesMaterial
+			ifc:relatedObjects_IfcRelAssociates 			?IfcPlate ;
+			ifc:relatingMaterial_IfcRelAssociatesMaterial 	[ ifc:materialConstituents_IfcMaterialConstituentSet [ ifc:material_IfcMaterialConstituent [ ifc:name_IfcMaterial [ express:hasString ?name ]]]] ;
+			.
+		FILTER (regex(?name, "Glass",   "i")|| 
+				regex(?name, "Glazing", "i")  ).
+	}
+	####
+	
+	{
+		#### to identify material layer set	
+		?IfcRelAssociatesMaterial
+			ifc:relatedObjects_IfcRelAssociates 			?IfcPlate ;
+			ifc:relatingMaterial_IfcRelAssociatesMaterial 	?IfcMaterialConstituentSet ;
+			.	
+		?IfcMaterialConstituentSet
+			rdf:type  											ifc:IfcMaterialConstituentSet ;
+			ifc:materialConstituents_IfcMaterialConstituentSet 	?IfcMaterialConstituent ;	
+			.
+		?IfcMaterialConstituent
+			rdf:type       									ifc:IfcMaterialConstituent ;
+			ifc:material_IfcMaterialConstituent   			?IfcMaterial ;
+			ifc:name_IfcMaterialConstituent       			[ express:hasString ?name ] ;
+			.	
+		####
+		
+		bind( (xsd:ID(CONCAT("ID", strafter( xsd:string(?IfcMaterialConstituentSet),"IfcMaterialConstituentSet_" ))))	as ?RefIdMaterialLayerSet ) . 	
+		
+	} UNION {
+			
+		#### to identify material layer set	
+		?IfcRelAssociatesMaterial
+			ifc:relatedObjects_IfcRelAssociates 			?IfcPlate ;
+			ifc:relatingMaterial_IfcRelAssociatesMaterial 	?IfcMaterialConstituentSet ;
+			.	
+		?IfcMaterialConstituentSet
+			rdf:type  										ifc:IfcMaterialLayerSetUsage ;
+			ifc:forLayerSet_IfcMaterialLayerSetUsage 		?IfcMaterialLayerSet ;	
+			.
+		?IfcMaterialLayerSet
+			rdf:type  										ifc:IfcMaterialLayerSet ;
+			ifc:layerSetName_IfcMaterialLayerSet 			[ express:hasString ?name ] ;
+			ifc:materialLayers_IfcMaterialLayerSet  		?IfcMaterialLayer_List ;
+			.	
+		?IfcMaterialLayer_List
+			rdf:type  										ifc:IfcMaterialLayer_List ;
+			list:hasContents  								?IfcMaterialLayer ;
+			.
+		?IfcMaterialLayer
+			rdf:type       									ifc:IfcMaterialLayer ;
+			ifc:material_IfcMaterialLayer  					?IfcMaterial ;
+			.
+			
+		bind( (xsd:ID(CONCAT("ID", strafter( xsd:string(?IfcMaterialConstituentSet),"IfcMaterialLayerSetUsage_" ))))	as ?RefIdMaterialLayerSet ) . 	
+	}
+
+	bind( (xsd:ID(CONCAT("ID", strafter( xsd:string(?IfcPlate), 					"IfcPlate_" )))) 					as ?RefIdPanel ) . 	
+	
+	# ID of SimModel_ID1 (get the instance base URI + SimModel_ID1)
+	bind( URI(CONCAT(STRBEFORE( xsd:string(?IfcPlate), "IfcPlate_" ), "SimModel_ID1")) as ?SimModel_ID1 ) .
+}
+
+
+
+
+
+

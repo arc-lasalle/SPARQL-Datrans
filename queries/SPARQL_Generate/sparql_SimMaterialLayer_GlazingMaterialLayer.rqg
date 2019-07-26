@@ -1,0 +1,118 @@
+BASE <http://trans.example.com/>
+PREFIX iter: <http://w3id.org/sparql-generate/iter/>
+PREFIX fn: <http://w3id.org/sparql-generate/fn/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+PREFIX simcore: <http://www.opteemal.eu/schema/2017/01/SimModelCore#>
+PREFIX simres: <http://www.opteemal.eu/schema/2017/01/ResourcesGeneral#>
+PREFIX inst:  <http://opteemal-project.eu/resource/simmodel#>
+
+# last modification 2019.07.08
+
+GENERATE 
+{
+	GENERATE 
+	{	
+		GENERATE 
+		{
+			GENERATE 
+			{										
+				?IfcMaterialLayer_IRI 
+					rdf:type 								simres:SimMaterialLayer_GlazingMaterialLayer_Default ;
+					simcore:sourceModelSchema 				"IFC4"^^xsd:string ;		
+					simres:layerMaterial 					?IfcMaterial_IRI ;
+					simcore:sourceModelObjectType 			"IfcMaterialLayer"^^xsd:string ;		
+					simcore:simModelType 					"GlazingMaterialLayer"^^xsd:string ;
+					simcore:simModelSubtype 				"Default"^^xsd:string ;
+					simres:simMatLayer_LayerThickness 		?LayerThicknessValue ;
+					simres:layerThickness					?LayerThicknessValue ;		
+					simcore:isTemplateObject 				"false"^^xsd:boolean ;
+					simcore:simUniqueID 					"not defined"^^xsd:string ;
+					simcore:refId 							?IfcMaterialLayerRefId ;				
+					.				
+				?IfcMaterial_IRI 
+					rdf:type 								simres:SimMaterial_GlazingMaterial_SimpleGlazingSystem ;
+					simres:category                			?category ;
+					simres:name                    			?MaterialName ;
+					simcore:sourceModelSchema 				"IFC4"^^xsd:string ;
+					simcore:sourceModelObjectType 			"IfcMaterial"^^xsd:string ;
+					simcore:simUniqueID 					"not defined"^^xsd:string ;					
+					simcore:isTemplateObject 				"false"^^xsd:boolean ;
+					simcore:simModelType 					"GlazingMaterial"^^xsd:string ;
+					simcore:simModelSubtype 				"SimpleGlazingSystem"^^xsd:string ;
+					simcore:refId 							?IfcMaterialRefId ;
+					.	
+					
+				# Glazing material properties -----------------------------------	
+				
+				GENERATE {
+					?IfcMaterial_IRI	simres:simMaterial_VisTrans				?VisualLightTransmittanceValue .
+				}
+				ITERATOR iter:XPath(?source, "//ifc_uos/IfcPropertySingleValue[@id='"+?IfcPropertySingleValue_REF+"'][Name='Visual Light Transmittance']") AS ?IfcPropertySingleValue1
+				WHERE {
+					BIND( xsd:double(fn:XPath(?IfcPropertySingleValue1,"/IfcPropertySingleValue/NominalValue/IfcReal-wrapper/text()")) AS ?VisualLightTransmittanceValue )
+				}.
+					
+				GENERATE {
+					?IfcMaterial_IRI	simres:simMaterial_SolarHeatGainCoef 	?SolarHeatGainCoefficientValue .
+				}
+				ITERATOR iter:XPath(?source, "//ifc_uos/IfcPropertySingleValue[@id='"+?IfcPropertySingleValue_REF+"'][Name='Solar Heat Gain Coefficient']") AS ?IfcPropertySingleValue2
+				WHERE {
+					BIND( xsd:double(fn:XPath(?IfcPropertySingleValue2,"/IfcPropertySingleValue/NominalValue/IfcReal-wrapper/text()")) AS ?SolarHeatGainCoefficientValue )
+				}.	
+					
+				GENERATE {
+					?IfcMaterial_IRI	simres:simMaterial_UFactor 				?HeatTransferCoefficientValue .
+				}
+				ITERATOR iter:XPath(?source, "//ifc_uos/IfcPropertySingleValue[@id='"+?IfcPropertySingleValue_REF+"'][Name='Heat Transfer Coefficient (U)']") AS ?IfcPropertySingleValue3
+				WHERE {
+					BIND( xsd:double(fn:XPath(?IfcPropertySingleValue3,"/IfcPropertySingleValue/NominalValue/IfcReal-wrapper/text()")) AS ?HeatTransferCoefficientValue )
+				}.	
+			}
+			ITERATOR iter:XPath(?source, "//ifc_uos/IfcMaterialProperties[Material/IfcMaterial[@ref='"+?IfcMaterial_REF+"']]/Properties/IfcPropertySingleValue") AS ?IfcPropertySingleValue
+			WHERE
+			{
+				BIND( fn:XPath(?IfcPropertySingleValue,"/IfcPropertySingleValue/@ref") AS ?IfcPropertySingleValue_REF )
+			}.				
+		}
+		ITERATOR iter:XPath(?source, "//ifc_uos/IfcMaterial[@id='"+?IfcMaterial_REF+"']" ) AS ?IfcMaterial2
+		WHERE
+		{	
+			BIND( fn:XPath(?IfcMaterial2,"/IfcMaterial/Name/text()" ) AS ?MaterialName )			
+			BIND( fn:XPath(?IfcMaterial2,"/IfcMaterial/Category/text()" ) AS ?category )		
+			
+			FILTER (regex(?MaterialName, "Glass",   "i")|| 
+					regex(?MaterialName, "Glazing", "i")   ).
+		}.
+	}
+	ITERATOR iter:XPath(?IfcMaterialLayer, "/IfcMaterialLayer/Material/IfcMaterial" ) AS ?IfcMaterial 
+	WHERE
+	{	
+		BIND( fn:XPath(?IfcMaterial,"/IfcMaterial/@ref") AS ?IfcMaterial_REF )
+		BIND( IRI( CONCAT( ?base, "IfcMaterial_", ?IfcMaterial_REF ) ) AS ?IfcMaterial_IRI )
+		BIND( (xsd:ID(CONCAT("ID", ?IfcMaterial_REF))) as ?IfcMaterialRefId )		
+	}.		
+}
+
+SOURCE <http://ex.org/file1> AS ?source
+# This name variable is mapped to a file path in a new line that will be 
+# included by the program linked to the original file:
+
+ITERATOR iter:XPath(?source, "//ifc_uos/IfcMaterialLayer" ) AS ?IfcMaterialLayer
+WHERE 
+{
+	# 1. Extract base URI:
+	BIND (str(inst:) as ?base)
+	
+	BIND( fn:XPath(?IfcMaterialLayer,"/IfcMaterialLayer/@id" ) AS ?IfcMaterialLayer_ID )	
+	BIND( xsd:double(fn:XPath(?IfcMaterialLayer,"/IfcMaterialLayer/LayerThickness/text()" )) AS ?LayerThicknessValue )	
+	
+	BIND( IRI( CONCAT( ?base, "IfcMaterialLayer_", ?IfcMaterialLayer_ID ) ) AS ?IfcMaterialLayer_IRI )
+	BIND( (xsd:ID(CONCAT("ID", ?IfcMaterialLayer_ID))) as ?IfcMaterialLayerRefId ) . 
+}
+
+
+
+
+
+

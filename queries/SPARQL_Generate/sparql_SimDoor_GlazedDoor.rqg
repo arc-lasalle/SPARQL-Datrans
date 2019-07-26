@@ -1,0 +1,126 @@
+BASE <http://trans.example.com/>
+PREFIX iter: <http://w3id.org/sparql-generate/iter/>
+PREFIX fn: <http://w3id.org/sparql-generate/fn/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+PREFIX simcore: <http://www.opteemal.eu/schema/2017/01/SimModelCore#>
+PREFIX simbldg: <http://www.opteemal.eu/schema/2017/01/BuildingModel#>
+PREFIX inst:  <http://opteemal-project.eu/resource/simmodel#>
+
+# last modification: 2019.06.06
+
+GENERATE
+{
+	GENERATE
+	{
+		GENERATE
+		{
+			GENERATE
+			{
+				?IfcDoor_IRI 
+					rdf:type 							simbldg:SimDoor_GlazedDoor ;
+					simbldg:materialList           		?IfcMaterialList_IRI ;
+					simcore:ifcGlobalID 				?globalId ;
+					simcore:isTemplateObject 			"false"^^xsd:boolean ;
+					simcore:name 						?name_IfcRoot ;
+					simcore:refId 						?DoorRefId ;                        
+					simcore:simModelType				"GlazedDoor"^^xsd:string ;
+					simcore:simUniqueID             	"not defined" ;
+					simcore:sourceModelObjectType 		"IfcDoor"^^xsd:string ;
+					simcore:sourceModelSchema 			"IFC4"^^xsd:string ;
+					simcore:tag 						?tag ;
+					.
+					
+				#BUILDING STOREY
+				GENERATE { 	
+					?IfcDoor_IRI 	simcore:containingSpatialStructure	?IfcBuildingStorey_IRI 	.
+				}	
+				ITERATOR iter:XPath(?source, "//ifc_uos/IfcRelContainedInSpatialStructure[RelatedElements/IfcDoor[@ref='"+?IfcDoor_ID+"']]" ) AS ?IfcRelContainedInSpatialStructure
+				WHERE
+				{
+					BIND( fn:XPath(?IfcRelContainedInSpatialStructure,"/IfcRelContainedInSpatialStructure/RelatingStructure/IfcBuildingStorey/@ref" ) AS ?IfcBuildingStorey_REF )
+					BIND( IRI( CONCAT( ?base, "IfcBuildingStorey_",?IfcBuildingStorey_REF ) ) AS ?IfcBuildingStorey_IRI )
+				}.
+				
+				#PSETS
+				GENERATE 
+				{ 
+					GENERATE 
+					{ 
+						GENERATE 
+						{ 
+							?IfcDoor_IRI 
+								simcore:objectType	?IfcPropertySingleValue_name ;
+								.
+						}	
+						ITERATOR iter:XPath(?source, "//ifc_uos/IfcPropertySingleValue[@id='"+?IfcPropertySingleValue_REF+"'][Name = 'Reference']" ) AS ?IfcPropertySingleValue
+						WHERE
+						{
+							BIND( fn:XPath(?IfcPropertySingleValue,"/IfcPropertySingleValue/NominalValue/IfcIdentifier-wrapper/text()" ) AS ?IfcPropertySingleValue_name )
+						}.		
+					}	
+					ITERATOR iter:XPath(?source, "//ifc_uos/IfcPropertySet[@id='"+?IfcPropertySet_REF+"']/HasProperties/IfcPropertySingleValue" ) AS ?IfcPropertySet
+					WHERE
+					{
+						BIND( fn:XPath(?IfcPropertySet,"/IfcPropertySingleValue/@ref" ) AS ?IfcPropertySingleValue_REF )        
+					}.		
+				}	
+				ITERATOR iter:XPath(?source, "//ifc_uos/IfcRelDefinesByProperties[RelatedObjects/IfcDoor[@ref='"+?IfcDoor_ID+"']]" ) AS ?IfcRelDefinesByProperties
+				WHERE
+				{
+					BIND( fn:XPath(?IfcRelDefinesByProperties,"/IfcRelDefinesByProperties/RelatingPropertyDefinition/IfcPropertySet/@ref" ) AS ?IfcPropertySet_REF )     
+				}.
+			}
+			ITERATOR iter:XPath(?source, "//ifc_uos/IfcRelAssociatesMaterial[RelatedObjects/IfcDoor[@ref='"+?IfcDoor_ID+"']]/RelatingMaterial/IfcMaterialConstituentSet/MaterialConstituents/IfcMaterialConstituent" ) AS ?IfcMaterialConstituent
+			WHERE
+			{
+				BIND( fn:XPath(?IfcMaterialConstituent,"/IfcMaterialConstituent/Name/text()") AS ?IfcMaterialConstituent_Name )	
+				FILTER ( xsd:string(?IfcMaterialConstituent_Name) = xsd:string("Glass") ). 
+			}.
+
+		}
+		ITERATOR iter:XPath(?source, "//ifc_uos/IfcRelAssociatesMaterial[RelatedObjects/IfcDoor[@ref='"+?IfcDoor_ID+"']]/RelatingMaterial/IfcMaterialConstituentSet/MaterialConstituents" ) AS ?MaterialConstituents
+		WHERE
+		{
+			BIND( fn:XPath(?MaterialConstituents,"/MaterialConstituents/" ) AS ?MaterialConstituents )
+		}.
+	}
+	ITERATOR iter:XPath(?source, "//ifc_uos/IfcRelAssociatesMaterial" ) AS ?IfcRelAssociatesMaterial
+	WHERE
+	{
+		BIND( fn:XPath(?IfcRelAssociatesMaterial,"/IfcRelAssociatesMaterial/RelatedObjects/IfcDoor/@ref" ) AS ?IfcDoor_REF_2 )
+		BIND( fn:XPath(?IfcRelAssociatesMaterial,"/IfcRelAssociatesMaterial/RelatingMaterial/IfcMaterialConstituentSet/@id" ) AS ?IfcMaterialConstituentSet_ID )
+		
+		
+		BIND( IRI( CONCAT( ?base, "IfcMaterialConstituentSet_",?IfcMaterialConstituentSet_ID ) ) AS ?IfcMaterialList_IRI )
+		
+		
+		FILTER ( xsd:string(?IfcDoor_REF_2) = xsd:string(?IfcDoor_ID) )
+	}.
+}
+
+SOURCE <http://ex.org/file1> AS ?source
+# This name variable is mapped to a file path in a new line that will be 
+# included by the program linked to the original file:
+
+ITERATOR iter:XPath(?source, "//ifc_uos/IfcDoor" ) AS ?IfcDoor
+WHERE 
+{
+	# 1. Extract base URI:
+	BIND (str(inst:) as ?base)
+
+	# 2. Extract element names:
+	BIND( fn:XPath(?IfcDoor,"/IfcDoor/@id" ) AS ?IfcDoor_ID )	
+	BIND( fn:XPath(?IfcDoor,"/IfcDoor/GlobalId/text()") AS ?globalId )
+	BIND( fn:XPath(?IfcDoor,"/IfcDoor/Name/text()") AS ?name_IfcRoot )	
+	BIND( fn:XPath(?IfcDoor,"/IfcDoor/Tag/text()") AS ?tag )	
+	
+	# 3. Refine element names:
+	BIND( IRI( CONCAT( ?base, "IfcDoor_", ?IfcDoor_ID ) ) AS ?IfcDoor_IRI )
+	BIND( (xsd:ID(CONCAT("ID", ?IfcDoor_ID))) as ?DoorRefId ) . 
+}
+
+
+
+
+

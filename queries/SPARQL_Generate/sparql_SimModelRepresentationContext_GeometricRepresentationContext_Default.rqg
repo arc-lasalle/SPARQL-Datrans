@@ -1,0 +1,111 @@
+BASE <http://trans.example.com/>
+PREFIX iter: <http://w3id.org/sparql-generate/iter/>
+PREFIX fn: <http://w3id.org/sparql-generate/fn/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+PREFIX simcore: <http://www.opteemal.eu/schema/2017/01/SimModelCore#>
+PREFIX simres: <http://www.opteemal.eu/schema/2017/01/ResourcesGeneral#>
+PREFIX simgeom: <http://www.opteemal.eu/schema/2017/01/ResourcesGeometry#>
+PREFIX simbldg: <http://www.opteemal.eu/schema/2017/01/BuildingModel#>
+PREFIX list: <https://w3id.org/list#> 
+PREFIX inst:  <http://opteemal-project.eu/resource/simmodel#>
+
+# last modification: 2019.07.09
+
+GENERATE 
+{
+	?IfcGeometricRepresentationContext_IRI
+        rdf:type                		simbldg:_3DModelRepresentationContexts_List ;
+        list:hasContents  				?IfcGeometricRepresentationContext_Default_IRI ;
+		.		
+	?IfcGeometricRepresentationContext_Default_IRI
+		rdf:type 						simres:SimModelRepresentationContext_GeometricRepresentationContext_Default ;
+		simcore:isTemplateObject 		"false"^^xsd:boolean ;
+		simcore:simModelType 			"GeometricRepresentationContext"^^xsd:string ;
+		simcore:simModelSubtype 		"Default"^^xsd:string ;
+		simcore:sourceModelSchema 		"IFC4"^^xsd:string ;
+		simcore:sourceModelObjectType 	"IfcGeometricRepresentationContext"^^xsd:string ;
+		simres:contextType 				?ContextType ;		
+		simres:worldCoordinateSystem 	?IfcAxis2Placement3D_IRI ;		
+		simres:trueNorth 				?IfcDirection_IRI ;
+		simcore:refId 					?IfcGeometricRepresentationContextRefId ;
+		simcore:simUniqueID             "not defined" ;
+		simres:coordinateSpaceDimension	?CoordinateSpaceDimension ;
+		.	
+	?IfcDirection_IRI
+		rdf:type 						simgeom:SimGeomVector_Vector_Direction ;
+		simgeom:directionRatios 		?IfcReal_List_1_IRI ; # 2 points in XML exportation
+		simcore:simModelType 			"Vector"^^xsd:string ;
+		simcore:simModelSubtype 		"Direction"^^xsd:string ;
+		simcore:sourceModelSchema 		"IFC4"^^xsd:string ;
+		simcore:sourceModelObjectType 	"SimGeomVector"^^xsd:string ;
+		simcore:isTemplateObject 		"false"^^xsd:boolean ;
+		simcore:simUniqueID 			"not defined" ;
+		simcore:refId 					?IfcAxis2Placement3DRefId ;
+		.		
+	GENERATE 
+	{
+		?IfcReal_List_IRI 
+			rdf:type 			simcore:DoubleList ;
+			list:hasContents 	?IfcRealValue ;
+			list:hasNext 		?IIfcReal_List_IRI_NEXT ;
+			.
+	}		
+	ITERATOR iter:XPath(?source, "//ifc_uos/IfcDirection[@id='"+?IfcDirection_REF+"']/DirectionRatios/IfcReal") AS ?IfcReal ?pos ?hasNext
+	WHERE 
+	{
+		BIND( IRI( CONCAT( ?base, "IfcReal_List_",(?IfcDirection_REF + "_{str(?pos+1)}")) ) AS ?IfcReal_List_IRI )
+		BIND( IRI( CONCAT( ?base, "IfcReal_List_",(?IfcDirection_REF + "_{str(?pos+2)}")) ) AS ?IfcReal_List_IRI_NEXT_TEMP )
+		BIND( IF( ?hasNext, ?IfcReal_List_IRI_NEXT_TEMP , ?undef ) AS ?IIfcReal_List_IRI_NEXT ) 		
+		BIND( fn:XPath(?IfcReal,"//IfcReal/text()") AS ?IfcRealValue )		
+	}.
+	
+	GENERATE 
+	{
+		?IfcAxis2Placement3D_IRI
+			a                              	simgeom:SimPlacement_Axis2Placement3D_Default ;
+			simgeom:location               	?IfcCartesianPoint_IRI ;
+			simcore:isTemplateObject       	false ;
+			simcore:refId                  	"ID32"^^xsd:ID ;
+			simcore:simModelSubtype        	"Default" ;
+			simcore:simModelType           	"Axis2Placement3D" ;
+			simcore:simUniqueID            	"not defined" ;
+			simcore:sourceModelObjectType  	"IfcAxis2Placement3D" ;
+			simcore:sourceModelSchema      	"IFC4" ;
+			.
+	}
+	ITERATOR iter:XPath(?source, "//ifc_uos/IfcAxis2Placement3D[@id='"+?IfcAxis2Placement3D_REF+"']/Location/IfcCartesianPoint/@ref") AS ?IfcCartesianPoint_REF
+	WHERE 
+	{
+		BIND( IRI( CONCAT( ?base, "IfcCartesianPoint_", ?IfcCartesianPoint_REF ) ) AS ?IfcCartesianPoint_IRI )
+	}.
+}
+
+SOURCE <http://ex.org/file1> AS ?source
+# This name variable is mapped to a file path in a new line that will be 
+# included by the program linked to the original file:
+
+ITERATOR iter:XPath(?source, "//ifc_uos/IfcGeometricRepresentationContext" ) AS ?IfcGeometricRepresentationContext
+WHERE 
+{
+    # 1. Extract base URI:
+	BIND (str(inst:) as ?base)
+	
+	BIND( fn:XPath(?IfcGeometricRepresentationContext,"/IfcGeometricRepresentationContext/@id") AS ?IfcGeometricRepresentationContext_ID )
+	BIND( IRI( CONCAT( ?base, "IfcGeometricRepresentationContext_", ?IfcGeometricRepresentationContext_ID)) AS ?IfcGeometricRepresentationContext_IRI )	
+	BIND( IRI( CONCAT( ?base, "IfcGeometricRepresentationContext_default_", ?IfcGeometricRepresentationContext_ID )) AS ?IfcGeometricRepresentationContext_Default_IRI )
+	
+	BIND( fn:XPath(?IfcGeometricRepresentationContext,"/IfcGeometricRepresentationContext/ContextType/text()") AS ?ContextType )
+	BIND( xsd:integer(fn:XPath(?IfcGeometricRepresentationContext,"/IfcGeometricRepresentationContext/CoordinateSpaceDimension/text()")) AS ?CoordinateSpaceDimension )
+	BIND( fn:XPath(?IfcGeometricRepresentationContext,"/IfcGeometricRepresentationContext/TrueNorth/IfcDirection/@ref") AS ?IfcDirection_REF )
+	BIND( IRI( CONCAT( ?base, "IfcDirection_", ?IfcDirection_REF )) AS ?IfcDirection_IRI )
+	BIND( IRI( CONCAT( ?base, CONCAT("IfcReal_List_", ?IfcDirection_REF), "_1")) AS ?IfcReal_List_1_IRI )
+
+	BIND( fn:XPath(?IfcGeometricRepresentationContext,"/IfcGeometricRepresentationContext/WorldCoordinateSystem/IfcAxis2Placement3D/@ref") AS ?IfcAxis2Placement3D_REF )
+	BIND( IRI( CONCAT( ?base, "IfcAxis2Placement3D_", ?IfcAxis2Placement3D_REF )) AS ?IfcAxis2Placement3D_IRI )
+
+	BIND( (xsd:ID(CONCAT("ID", ?IfcGeometricRepresentationContext_ID))) as ?IfcGeometricRepresentationContextRefId )
+	BIND( (xsd:ID(CONCAT("ID", ?IfcAxis2Placement3D_REF))) as ?IfcAxis2Placement3DRefId )
+}
+
+

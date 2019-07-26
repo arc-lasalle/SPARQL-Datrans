@@ -1,0 +1,81 @@
+# IMPORTANT: use "ifc" allways as a prefix name for all of IFC instances and do not add any prefix URI for them.
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX rdf:	<http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX simcore: <http://www.opteemal.eu/schema/2017/01/SimModelCore#>
+PREFIX simbldg: <http://www.opteemal.eu/schema/2017/01/BuildingModel#>
+PREFIX simmodel: <http://www.opteemal.eu/schema/2017/01/Model#>
+
+# last motifcation 2017.07.24
+
+CONSTRUCT
+{
+	?IfcWallStandardCase 
+		rdf:type 								simbldg:SimWall_Wall_Default ;		
+		simcore:name 							?name_IfcRootValue ; 	
+		simbldg:materialLayerSet 				?IfcMaterialLayerSet ;
+		simcore:containingSpatialStructure 		?simBuildingStorey ;
+		simcore:ifcGlobalID 					?IfcGloballyUniqueIdValue ;
+		simcore:refId 							?simWallRefId ;				
+		simcore:objectType 						"Wall"^^xsd:string ;  	
+		simcore:isTemplateObject 				"false"^^xsd:boolean ;
+		simcore:simModelSubtype 				"Default"^^xsd:string ;		
+		simcore:simModelType 					"Wall"^^xsd:string ;
+		simcore:simUniqueID 					"not defined" ;
+		simcore:sourceModelObjectType 			"IfcWall"^^xsd:string ;
+		simcore:sourceModelSchema 				"IFC4" ;
+		simcore:tag 							"not defined" ;
+		.			
+}
+WHERE 
+{
+	# PART 1 General information --------------------------------------------
+	?IfcWallStandardCase 
+		rdf:type ifc:IfcWallStandardCase ;
+		.
+	?simBuildingStorey 
+		rdf:type ifc:IfcBuildingStorey ;
+		.
+	?IfcRelContainedInSpatialStructure 
+		rdf:type 												ifc:IfcRelContainedInSpatialStructure ;
+		ifc:relatingStructure_IfcRelContainedInSpatialStructure ?simBuildingStorey ;
+		ifc:relatedElements_IfcRelContainedInSpatialStructure 	?IfcWallStandardCase ;
+		.
+	?IfcWallStandardCase 
+		rdf:type 				ifc:IfcWallStandardCase ;
+		ifc:globalId_IfcRoot 	[ express:hasString ?IfcGloballyUniqueIdValue ] ;
+		ifc:name_IfcRoot 		[ express:hasString ?name_IfcRootValue ] ;
+		.
+
+	bind( (xsd:ID(CONCAT("ID", strafter( xsd:string(?IfcWallStandardCase), "IfcWallStandardCase_" )))) as ?simWallRefId ) .
+	
+	# Connection to material Layer set:
+	?IfcRelAssociatesMaterial 
+		rdf:type  										ifc:IfcRelAssociatesMaterial ;
+		ifc:relatedObjects_IfcRelAssociates 			?IfcWallStandardCase ;
+		ifc:relatingMaterial_IfcRelAssociatesMaterial 	?IfcMaterialLayerSetUsage ;
+		.
+	?IfcMaterialLayerSetUsage  
+		rdf:type  										ifc:IfcMaterialLayerSetUsage ;
+		ifc:forLayerSet_IfcMaterialLayerSetUsage  		?IfcMaterialLayerSet ;
+		.
+	
+	?IfcRel 
+		ifc:relatedObjects_IfcRelDefinesByProperties 				?IfcWallStandardCase;
+		ifc:relatingPropertyDefinition_IfcRelDefinesByProperties 	?IfcPropertySet ;
+		.
+	
+	?IfcPropertySet 
+		ifc:hasProperties_IfcPropertySet ?IfcPropertySingleValue ;
+		.
+	?IfcPropertySingleValue 
+		rdf:type						 		ifc:IfcPropertySingleValue ;
+		ifc:name_IfcProperty					[ express:hasString "Area" ];
+		ifc:nominalValue_IfcPropertySingleValue [ express:hasDouble ?area ] .
+		
+	# ID of SimModel_ID1 (get the instance base URI + SimModel_ID1)
+	bind( URI(CONCAT(STRBEFORE( xsd:string(?IfcWallStandardCase), "IfcWallStandardCase_" ), "SimModel_ID1")) as ?SimModel_ID1 ) .
+}
+
+
+
+
